@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useGoals, useUpdateGoals } from "@/hooks/use-goals";
+import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,10 +8,11 @@ import { insertGoalSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, Target } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Loader2, Save, Target, LogOut, User, Flame, Beef, Wheat, Droplets } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { motion } from "framer-motion";
 
 const formSchema = insertGoalSchema.extend({
   calories: z.coerce.number().min(100),
@@ -23,6 +25,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function Settings() {
   const { data: goals, isLoading } = useGoals();
+  const { user, logout } = useAuth();
   const updateGoals = useUpdateGoals();
   const { toast } = useToast();
 
@@ -46,13 +49,13 @@ export default function Settings() {
     try {
       await updateGoals.mutateAsync(data);
       toast({
-        title: "Goals Updated",
-        description: "Your nutrition targets have been saved successfully.",
+        title: "تم الحفظ",
+        description: "تم تحديث أهدافك الغذائية بنجاح.",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update goals.",
+        title: "خطأ",
+        description: "فشل في تحديث الأهداف.",
         variant: "destructive",
       });
     }
@@ -61,7 +64,7 @@ export default function Settings() {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="flex h-full items-center justify-center">
+        <div className="flex h-[60vh] items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -70,88 +73,139 @@ export default function Settings() {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-display font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage your preferences and goals</p>
-        </div>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">الإعدادات</h1>
 
-        <Card className="border shadow-sm overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b">
-            <div className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-primary" />
-              <CardTitle>Nutrition Goals</CardTitle>
+        {/* User Profile Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <Card className="p-5 border-0 shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center overflow-hidden">
+                {user?.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-8 h-8 text-white" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg">{user?.firstName || "مستخدم"} {user?.lastName || ""}</h3>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+              </div>
             </div>
-            <CardDescription>
-              Set your daily targets for calories and macronutrients.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            
+            <Button 
+              variant="outline"
+              className="w-full mt-4 h-12 rounded-xl text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => logout()}
+            >
+              <LogOut className="w-5 h-5 ml-2" />
+              تسجيل الخروج
+            </Button>
+          </Card>
+        </motion.div>
+
+        {/* Goals Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <Card className="p-5 border-0 shadow-md">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Target className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">الأهداف اليومية</h3>
+                <p className="text-sm text-muted-foreground">حدد أهدافك من السعرات والعناصر الغذائية</p>
+              </div>
+            </div>
+
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              {/* Calories */}
               <div className="space-y-2">
-                <Label htmlFor="calories" className="text-lg font-medium">Daily Calorie Target</Label>
+                <Label htmlFor="calories" className="flex items-center gap-2 font-bold">
+                  <Flame className="w-4 h-4 text-primary" />
+                  السعرات الحرارية اليومية
+                </Label>
                 <div className="relative">
                   <Input 
                     id="calories" 
                     type="number" 
                     {...form.register("calories")} 
-                    className="pl-4 h-12 text-lg font-bold border-primary/20 focus-visible:ring-primary"
+                    className="h-14 text-2xl font-bold text-center rounded-xl border-primary/30 focus-visible:ring-primary"
                   />
-                  <div className="absolute right-4 top-3 text-muted-foreground font-medium">kcal</div>
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                    سعرة
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  This is your main energy budget for the day.
-                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
+              {/* Macros Grid */}
+              <div className="grid grid-cols-3 gap-3 pt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="protein" className="text-orange-700 font-medium">Protein (g)</Label>
+                  <Label htmlFor="protein" className="flex items-center gap-1 text-sm font-medium" style={{ color: "hsl(142 71% 45%)" }}>
+                    <Beef className="w-4 h-4" />
+                    بروتين
+                  </Label>
                   <Input 
                     id="protein" 
                     type="number" 
                     {...form.register("protein")}
-                    className="border-orange-200 focus-visible:ring-orange-500 bg-orange-50/30" 
+                    className="h-12 text-center rounded-xl font-bold"
+                    style={{ borderColor: "hsl(142 71% 45% / 0.3)" }}
                   />
+                  <p className="text-xs text-center text-muted-foreground">غرام</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="carbs" className="text-yellow-700 font-medium">Carbs (g)</Label>
+                  <Label htmlFor="carbs" className="flex items-center gap-1 text-sm font-medium" style={{ color: "hsl(25 95% 53%)" }}>
+                    <Wheat className="w-4 h-4" />
+                    كربوهيدرات
+                  </Label>
                   <Input 
                     id="carbs" 
                     type="number" 
                     {...form.register("carbs")} 
-                    className="border-yellow-200 focus-visible:ring-yellow-500 bg-yellow-50/30" 
+                    className="h-12 text-center rounded-xl font-bold"
+                    style={{ borderColor: "hsl(25 95% 53% / 0.3)" }}
                   />
+                  <p className="text-xs text-center text-muted-foreground">غرام</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fats" className="text-purple-700 font-medium">Fats (g)</Label>
+                  <Label htmlFor="fats" className="flex items-center gap-1 text-sm font-medium" style={{ color: "hsl(271 81% 56%)" }}>
+                    <Droplets className="w-4 h-4" />
+                    دهون
+                  </Label>
                   <Input 
                     id="fats" 
                     type="number" 
                     {...form.register("fats")} 
-                    className="border-purple-200 focus-visible:ring-purple-500 bg-purple-50/30" 
+                    className="h-12 text-center rounded-xl font-bold"
+                    style={{ borderColor: "hsl(271 81% 56% / 0.3)" }}
                   />
+                  <p className="text-xs text-center text-muted-foreground">غرام</p>
                 </div>
               </div>
 
-              <div className="pt-6 flex justify-end">
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="w-full sm:w-auto"
-                  disabled={updateGoals.isPending}
-                >
-                  {updateGoals.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Save Changes
-                </Button>
-              </div>
+              <Button 
+                type="submit" 
+                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-emerald-500 rounded-2xl shadow-lg mt-6"
+                disabled={updateGoals.isPending}
+              >
+                {updateGoals.isPending ? (
+                  <Loader2 className="w-5 h-5 ml-2 animate-spin" />
+                ) : (
+                  <Save className="w-5 h-5 ml-2" />
+                )}
+                حفظ التغييرات
+              </Button>
             </form>
-          </CardContent>
-        </Card>
+          </Card>
+        </motion.div>
       </div>
     </AppLayout>
   );

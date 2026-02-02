@@ -1,122 +1,304 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Fresh, Health-Focused Palette */
-  /* Primary: Vibrant Green */
-  --primary: 142 76% 36%;
-  --primary-foreground: 355.7 100% 97.3%;
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
 
-  /* Secondary: Soft Orange/Peach for warmth */
-  --secondary: 24 95% 53%;
-  --secondary-foreground: 0 0% 100%;
+  /* Appetit Style - Fresh Green Primary */
+  --primary: 158 64% 52%;
+  --primary-foreground: 0 0% 100%;
 
-  /* Backgrounds: Clean and Crisp */
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
+  /* Backgrounds */
+  --background: 210 20% 98%;
+  --foreground: 222 47% 11%;
 
-  /* Cards & UI Elements */
+  /* Cards */
   --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
+  --card-foreground: 222 47% 11%;
+  --card-border: 220 13% 91%;
+
+  /* Sidebar (not used but required) */
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-primary: 158 64% 52%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 158 64% 96%;
+  --sidebar-accent-foreground: 158 64% 30%;
+  --sidebar-ring: 158 64% 52%;
+
+  /* Popover */
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
+  --popover-foreground: 222 47% 11%;
+  --popover-border: 220 13% 91%;
 
-  /* Muted tones for UI structure */
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  
-  /* Accents */
-  --accent: 142 70% 95%; /* Very light green for hover states */
-  --accent-foreground: 240 5.9% 10%;
+  /* Secondary */
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 222 47% 11%;
 
-  /* Functional Colors */
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 142 76% 36%;
+  /* Muted */
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
 
-  /* Chart Colors (Macros) */
-  --chart-calories: 142 76% 36%; /* Green */
-  --chart-protein: 24 95% 53%;   /* Orange */
-  --chart-carbs: 47 95% 57%;     /* Yellow */
-  --chart-fats: 262 83% 58%;     /* Purple */
+  /* Accent */
+  --accent: 158 64% 96%;
+  --accent-foreground: 158 64% 30%;
 
-  /* Radius */
-  --radius: 0.75rem;
+  /* Destructive */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
 
-  /* Fonts */
-  --font-display: 'Outfit', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  /* Inputs */
+  --input: 220 13% 91%;
+  --ring: 158 64% 52%;
+  --border: 220 13% 91%;
+
+  /* Charts - Appetit Macro Colors */
+  --chart-1: 158 64% 52%; /* Calories - Teal */
+  --chart-2: 142 71% 45%; /* Protein - Green */
+  --chart-3: 25 95% 53%;  /* Carbs - Orange */
+  --chart-4: 271 81% 56%; /* Fats - Purple */
+  --chart-5: 199 89% 48%; /* Water - Blue */
+
+  /* Macro Colors */
+  --color-protein: 142 71% 45%;
+  --color-carbs: 25 95% 53%;
+  --color-fats: 271 81% 56%;
+  --color-calories: 158 64% 52%;
+
+  --font-sans: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 1rem;
+
+  --shadow-2xs: 0 1px 2px 0 rgba(0,0,0,0.03);
+  --shadow-xs: 0 1px 3px 0 rgba(0,0,0,0.04);
+  --shadow-sm: 0 2px 4px 0 rgba(0,0,0,0.05);
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.07);
+  --shadow-md: 0 6px 12px -2px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 20px -3px rgba(0,0,0,0.10);
+  --shadow-xl: 0 20px 40px -4px rgba(0,0,0,0.12);
+
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
 }
 
 .dark {
-  /* Dark Mode Palette - Deep & Sleek */
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  
-  --primary: 142 70% 50%;
-  --primary-foreground: 144.9 80.4% 10%;
-  
-  --secondary: 24 95% 60%;
-  --secondary-foreground: 0 0% 100%;
-  
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  
-  --destructive: 0 62.8% 30.6%;
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+
+  --primary: 158 64% 52%;
+  --primary-foreground: 0 0% 100%;
+
+  --background: 222 47% 8%;
+  --foreground: 210 20% 98%;
+
+  --card: 222 47% 11%;
+  --card-foreground: 210 20% 98%;
+  --card-border: 222 30% 18%;
+
+  --sidebar: 222 47% 11%;
+  --sidebar-foreground: 210 20% 98%;
+  --sidebar-border: 222 30% 18%;
+  --sidebar-primary: 158 64% 52%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 30% 18%;
+  --sidebar-accent-foreground: 158 64% 70%;
+  --sidebar-ring: 158 64% 52%;
+
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 20% 98%;
+  --popover-border: 222 30% 18%;
+
+  --secondary: 222 30% 18%;
+  --secondary-foreground: 210 20% 98%;
+
+  --muted: 222 30% 18%;
+  --muted-foreground: 220 9% 60%;
+
+  --accent: 222 30% 18%;
+  --accent-foreground: 158 64% 70%;
+
+  --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 98%;
-  
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 142 70% 50%;
+
+  --input: 222 30% 18%;
+  --ring: 158 64% 52%;
+  --border: 222 30% 18%;
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
-    font-family: var(--font-body);
+    @apply font-sans antialiased bg-background text-foreground;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
     @apply font-semibold tracking-tight;
   }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Appetit-style gradient ring */
+.calorie-ring-gradient {
+  background: conic-gradient(from 180deg, hsl(158 64% 52%), hsl(142 71% 45%), hsl(158 64% 52%));
 }
+
+/* Smooth animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease-out forwards;
+}
+
+/* Meal category gradients */
+.meal-breakfast {
+  background: linear-gradient(135deg, hsl(45 93% 47%) 0%, hsl(36 100% 50%) 100%);
+}
+
+.meal-lunch {
+  background: linear-gradient(135deg, hsl(25 95% 53%) 0%, hsl(15 85% 50%) 100%);
+}
+
+.meal-dinner {
+  background: linear-gradient(135deg, hsl(271 81% 56%) 0%, hsl(261 75% 50%) 100%);
+}
+
+.meal-snack {
+  background: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(189 85% 45%) 100%);
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dark .glass {
+  background: rgba(30, 41, 59, 0.8);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30 transition-colors;
+  @apply bg-muted-foreground/20 rounded-full;
 }
 
-/* Animations */
-@keyframes enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
 }
 
-.animate-enter {
-  animation: enter 0.4s ease-out forwards;
+/* Bottom navigation safe area */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
-.glass-panel {
-  @apply bg-white/80 dark:bg-black/50 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-sm;
+@layer utilities {
+  .no-default-hover-elevate {}
+  .no-default-active-elevate {}
+
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: -1;
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: 999;
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after {
+    inset: -1px;
+  }
 }

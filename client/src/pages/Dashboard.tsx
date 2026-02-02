@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
+import { ar } from "date-fns/locale";
 import { useMeals, useDeleteMeal } from "@/hooks/use-meals";
 import { useGoals } from "@/hooks/use-goals";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -8,11 +9,44 @@ import { MacroCard } from "@/components/dashboard/MacroCard";
 import { DateSelector } from "@/components/common/DateSelector";
 import { AddMealDialog } from "@/components/meals/AddMealDialog";
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2, Utensils } from "lucide-react";
-import { motion } from "framer-motion";
+import { Card } from "@/components/ui/card";
+import { 
+  Trash2, 
+  Loader2, 
+  Sun, 
+  CloudSun, 
+  Moon, 
+  Cookie,
+  Plus,
+  Beef,
+  Wheat,
+  Droplets,
+  ChevronLeft
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import type { Meal } from "@shared/schema";
+
+type MealCategory = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+const mealCategories: { key: MealCategory; label: string; labelAr: string; icon: any; gradient: string }[] = [
+  { key: 'breakfast', label: 'Breakfast', labelAr: 'الفطور', icon: Sun, gradient: 'from-amber-400 to-orange-500' },
+  { key: 'lunch', label: 'Lunch', labelAr: 'الغداء', icon: CloudSun, gradient: 'from-orange-500 to-red-500' },
+  { key: 'dinner', label: 'Dinner', labelAr: 'العشاء', icon: Moon, gradient: 'from-purple-500 to-violet-600' },
+  { key: 'snack', label: 'Snack', labelAr: 'وجبات خفيفة', icon: Cookie, gradient: 'from-cyan-400 to-blue-500' },
+];
+
+function categorizeMeal(date: Date): MealCategory {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 11) return 'breakfast';
+  if (hour >= 11 && hour < 16) return 'lunch';
+  if (hour >= 16 && hour < 21) return 'dinner';
+  return 'snack';
+}
 
 export default function Dashboard() {
   const [date, setDate] = useState<Date>(new Date());
+  const [expandedCategory, setExpandedCategory] = useState<MealCategory | null>(null);
   const { data: meals, isLoading: mealsLoading } = useMeals(date);
   const { data: goals, isLoading: goalsLoading } = useGoals();
   const deleteMeal = useDeleteMeal();
@@ -20,14 +54,13 @@ export default function Dashboard() {
   if (mealsLoading || goalsLoading) {
     return (
       <AppLayout>
-        <div className="flex h-full items-center justify-center">
+        <div className="flex h-[60vh] items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </AppLayout>
     );
   }
 
-  // Calculate totals
   const totals = meals?.reduce(
     (acc, meal) => ({
       calories: acc.calories + meal.calories,
@@ -45,123 +78,210 @@ export default function Dashboard() {
     fats: 65,
   };
 
+  // Group meals by category
+  const mealsByCategory = meals?.reduce((acc, meal) => {
+    const category = categorizeMeal(new Date(meal.date));
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(meal);
+    return acc;
+  }, {} as Record<MealCategory, Meal[]>) || {};
+
+  const getCategoryCalories = (category: MealCategory) => {
+    return mealsByCategory[category]?.reduce((sum, m) => sum + m.calories, 0) || 0;
+  };
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-display font-bold">Dashboard</h1>
-            <p className="text-muted-foreground">Track your nutrition for today</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <DateSelector date={date} onDateChange={setDate} />
-            <AddMealDialog date={date} />
-          </div>
-        </div>
+        {/* Date Selector */}
+        <DateSelector date={date} onDateChange={setDate} />
 
-        {/* Overview Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Main Calorie Ring Card */}
-          <motion.div 
-            className="md:col-span-1 bg-card rounded-3xl p-6 border shadow-sm"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <h2 className="text-lg font-semibold mb-4 text-center">Calories</h2>
-            <CalorieRing consumed={totals.calories} target={target.calories} />
-          </motion.div>
+        {/* Calorie Ring Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="p-6 border-0 shadow-lg bg-gradient-to-br from-card to-muted/30">
+            <div className="flex flex-col items-center">
+              <CalorieRing consumed={totals.calories} target={target.calories} />
+              
+              {/* Quick stats */}
+              <div className="flex items-center gap-6 mt-6 text-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">{totals.calories}</p>
+                  <p className="text-muted-foreground">مستهلك</p>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">{target.calories}</p>
+                  <p className="text-muted-foreground">الهدف</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
 
-          {/* Macros Grid */}
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ delay: 0.2 }}
-            >
+        {/* Macros Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Card className="p-5 border-0 shadow-md">
+            <h3 className="font-bold text-lg mb-4">العناصر الغذائية</h3>
+            <div className="space-y-4">
               <MacroCard 
-                label="Protein" 
+                label="البروتين" 
                 consumed={totals.protein} 
                 target={target.protein} 
-                color="hsl(24 95% 53%)" // Orange
+                color="hsl(142 71% 45%)"
+                icon={Beef}
               />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ delay: 0.3 }}
-            >
               <MacroCard 
-                label="Carbs" 
+                label="الكربوهيدرات" 
                 consumed={totals.carbs} 
                 target={target.carbs} 
-                color="hsl(47 95% 57%)" // Yellow
+                color="hsl(25 95% 53%)"
+                icon={Wheat}
               />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ delay: 0.4 }}
-            >
               <MacroCard 
-                label="Fats" 
+                label="الدهون" 
                 consumed={totals.fats} 
                 target={target.fats} 
-                color="hsl(262 83% 58%)" // Purple
+                color="hsl(271 81% 56%)"
+                icon={Droplets}
               />
-            </motion.div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Meals by Category */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-lg">وجبات اليوم</h3>
+            <AddMealDialog date={date} />
           </div>
+
+          {mealCategories.map((category, index) => {
+            const categoryMeals = mealsByCategory[category.key] || [];
+            const categoryCalories = getCategoryCalories(category.key);
+            const isExpanded = expandedCategory === category.key;
+            const Icon = category.icon;
+
+            return (
+              <motion.div
+                key={category.key}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 + index * 0.1 }}
+              >
+                <Card 
+                  className={cn(
+                    "overflow-hidden border-0 shadow-sm transition-all duration-300",
+                    isExpanded && "shadow-md"
+                  )}
+                >
+                  {/* Category Header */}
+                  <button
+                    onClick={() => setExpandedCategory(isExpanded ? null : category.key)}
+                    className="w-full p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors"
+                    data-testid={`meal-category-${category.key}`}
+                  >
+                    <div className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br text-white shadow-lg",
+                      category.gradient
+                    )}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    
+                    <div className="flex-1 text-right">
+                      <h4 className="font-bold">{category.labelAr}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {categoryMeals.length} {categoryMeals.length === 1 ? 'وجبة' : 'وجبات'}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-lg">{categoryCalories}</span>
+                      <span className="text-sm text-muted-foreground">سعرة</span>
+                      <ChevronLeft className={cn(
+                        "w-5 h-5 text-muted-foreground transition-transform duration-300",
+                        isExpanded && "rotate-90"
+                      )} />
+                    </div>
+                  </button>
+
+                  {/* Expanded Meals */}
+                  <AnimatePresence>
+                    {isExpanded && categoryMeals.length > 0 && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="border-t"
+                      >
+                        <div className="p-3 space-y-2">
+                          {categoryMeals.map((meal) => (
+                            <div 
+                              key={meal.id}
+                              className="flex items-center justify-between p-3 bg-muted/30 rounded-xl group"
+                            >
+                              <div>
+                                <p className="font-medium">{meal.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(meal.date), "h:mm a", { locale: ar })}
+                                </p>
+                              </div>
+                              
+                              <div className="flex items-center gap-3">
+                                <div className="text-left">
+                                  <p className="font-bold text-primary">{meal.calories} سعرة</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    ب{meal.protein} • ك{meal.carbs} • د{meal.fats}
+                                  </p>
+                                </div>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => deleteMeal.mutate(meal.id)}
+                                  data-testid={`delete-meal-${meal.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Card>
+              </motion.div>
+            );
+          })}
         </div>
 
-        {/* Meals List */}
-        <div className="mt-4">
-          <h2 className="text-xl font-bold font-display mb-4">Today's Meals</h2>
-          
-          <div className="space-y-3">
-            {meals && meals.length > 0 ? (
-              meals.map((meal, index) => (
-                <motion.div 
-                  key={meal.id} 
-                  className="bg-card p-4 rounded-xl border shadow-sm flex items-center justify-between group hover:border-primary/50 transition-colors"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 * index }}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
-                    <div>
-                      <h3 className="font-semibold text-lg">{meal.name}</h3>
-                      <p className="text-xs text-muted-foreground">{format(new Date(meal.date), "h:mm a")}</p>
-                    </div>
-                    <div className="flex gap-4 text-sm text-muted-foreground">
-                      <span className="font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">{meal.calories} kcal</span>
-                      <span><span className="font-medium text-foreground">{meal.protein}g</span> P</span>
-                      <span><span className="font-medium text-foreground">{meal.carbs}g</span> C</span>
-                      <span><span className="font-medium text-foreground">{meal.fats}g</span> F</span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => deleteMeal.mutate(meal.id)}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </Button>
-                </motion.div>
-              ))
-            ) : (
-              <div className="text-center py-12 bg-muted/30 rounded-2xl border border-dashed">
-                <Utensils className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                <h3 className="text-lg font-medium text-muted-foreground">No meals logged yet</h3>
-                <p className="text-sm text-muted-foreground/60 max-w-xs mx-auto mt-1">
-                  Click "Add Meal" to start tracking your nutrition for today.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Empty State */}
+        {(!meals || meals.length === 0) && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-12"
+          >
+            <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Plus className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="font-bold text-lg mb-1">لا توجد وجبات</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              ابدأ بتسجيل وجباتك لمتابعة سعراتك الحرارية
+            </p>
+            <AddMealDialog date={date} />
+          </motion.div>
+        )}
       </div>
     </AppLayout>
   );
