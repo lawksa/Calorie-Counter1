@@ -5,7 +5,8 @@ import {
   UtensilsCrossed, 
   Settings, 
   User,
-  Flame
+  Flame,
+  Store
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { label: "الرئيسية", href: "/", icon: LayoutDashboard },
-    { label: "الوجبات", href: "/meals", icon: UtensilsCrossed },
+    { label: "المطاعم", href: "/restaurants", icon: Store },
     { label: "الإعدادات", href: "/settings", icon: Settings },
   ];
 

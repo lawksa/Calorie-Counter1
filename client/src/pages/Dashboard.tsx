@@ -3,9 +3,11 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useMeals, useDeleteMeal } from "@/hooks/use-meals";
 import { useGoals } from "@/hooks/use-goals";
+import { useWaterIntake, useUpdateWaterIntake } from "@/hooks/use-water";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CalorieRing } from "@/components/dashboard/CalorieRing";
 import { MacroCard } from "@/components/dashboard/MacroCard";
+import { WaterTracker } from "@/components/dashboard/WaterTracker";
 import { DateSelector } from "@/components/common/DateSelector";
 import { AddMealDialog } from "@/components/meals/AddMealDialog";
 import { Button } from "@/components/ui/button";
@@ -49,9 +51,11 @@ export default function Dashboard() {
   const [expandedCategory, setExpandedCategory] = useState<MealCategory | null>(null);
   const { data: meals, isLoading: mealsLoading } = useMeals(date);
   const { data: goals, isLoading: goalsLoading } = useGoals();
+  const { data: waterData, isLoading: waterLoading } = useWaterIntake(date);
+  const updateWater = useUpdateWaterIntake();
   const deleteMeal = useDeleteMeal();
 
-  if (mealsLoading || goalsLoading) {
+  if (mealsLoading || goalsLoading || waterLoading) {
     return (
       <AppLayout>
         <div className="flex h-[60vh] items-center justify-center">
@@ -76,6 +80,16 @@ export default function Dashboard() {
     protein: 150,
     carbs: 200,
     fats: 65,
+    waterGlasses: 8,
+  };
+
+  const waterGlasses = waterData?.glasses || 0;
+
+  const handleWaterUpdate = (glasses: number) => {
+    updateWater.mutate({
+      glasses,
+      date: format(date, "yyyy-MM-dd"),
+    });
   };
 
   // Group meals by category
@@ -153,6 +167,22 @@ export default function Dashboard() {
                 icon={Droplets}
               />
             </div>
+          </Card>
+        </motion.div>
+
+        {/* Water Tracker */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+        >
+          <Card className="p-5 border-0 shadow-md">
+            <WaterTracker 
+              glasses={waterGlasses} 
+              target={target.waterGlasses || 8} 
+              onUpdate={handleWaterUpdate}
+              isPending={updateWater.isPending}
+            />
           </Card>
         </motion.div>
 

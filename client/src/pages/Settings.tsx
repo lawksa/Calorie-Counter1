@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Loader2, Save, Target, LogOut, User, Flame, Beef, Wheat, Droplets } from "lucide-react";
+import { Loader2, Save, Target, LogOut, User, Flame, Beef, Wheat, Droplets, GlassWater } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
@@ -36,6 +36,7 @@ export default function Settings() {
       protein: 150,
       carbs: 200,
       fats: 65,
+      waterGlasses: 8,
     },
   });
 
@@ -188,6 +189,25 @@ export default function Settings() {
                     style={{ borderColor: "hsl(271 81% 56% / 0.3)" }}
                   />
                   <p className="text-xs text-center text-muted-foreground">غرام</p>
+                </div>
+              </div>
+
+              {/* Water Goal */}
+              <div className="space-y-2 pt-4 border-t">
+                <Label htmlFor="waterGlasses" className="flex items-center gap-2 font-bold text-blue-500">
+                  <GlassWater className="w-4 h-4" />
+                  هدف الماء اليومي
+                </Label>
+                <div className="relative">
+                  <Input 
+                    id="waterGlasses" 
+                    type="number" 
+                    {...form.register("waterGlasses")} 
+                    className="h-12 text-center rounded-xl font-bold border-blue-200 focus-visible:ring-blue-500"
+                  />
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                    أكواب
+                  </div>
                 </div>
               </div>
 
