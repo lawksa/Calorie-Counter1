@@ -1,9 +1,13 @@
-import { users, goals, meals, type User, type InsertUser, type Goal, type InsertGoal, type Meal, type InsertMeal } from "@shared/schema";
+import { 
+  users, goals, meals, waterIntake, restaurants, menuItems,
+  type User, type InsertUser, type Goal, type InsertGoal, 
+  type Meal, type InsertMeal, type WaterIntake, type Restaurant, type MenuItem 
+} from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lt, desc } from "drizzle-orm";
 
 export interface IStorage {
-  // Auth (Required by Auth Integration, though implemented in auth/storage.ts usually, keeping here if needed or for reference)
+  // Auth
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
@@ -16,6 +20,14 @@ export interface IStorage {
   getMeals(userId: string, date: Date): Promise<Meal[]>;
   createMeal(userId: string, meal: InsertMeal & { date?: Date }): Promise<Meal>;
   deleteMeal(id: number, userId: string): Promise<void>;
+
+  // Water
+  getWaterIntake(userId: string, date: Date): Promise<WaterIntake | undefined>;
+  updateWaterIntake(userId: string, glasses: number, date: Date): Promise<WaterIntake>;
+
+  // Restaurants
+  getRestaurants(): Promise<Restaurant[]>;
+  getMenuItems(restaurantId: number): Promise<MenuItem[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -26,13 +38,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    // Note: Replit Auth uses email mostly, but if we have username column
-    const [user] = await db.select().from(users).where(eq(users.email, username)); // Mapping email to username query for compatibility if needed
+    const [user] = await db.select().from(users).where(eq(users.email, username));
     return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // This is handled by Replit Auth integration usually, but implementing for completeness
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
@@ -63,7 +73,6 @@ export class DatabaseStorage implements IStorage {
 
   // Meals
   async getMeals(userId: string, date: Date): Promise<Meal[]> {
-    // Filter by day
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
@@ -98,6 +107,63 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(meals)
       .where(and(eq(meals.id, id), eq(meals.userId, userId)));
+  }
+
+  // Water
+  async getWaterIntake(userId: string, date: Date): Promise<WaterIntake | undefined> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [water] = await db
+      .select()
+      .from(waterIntake)
+      .where(
+        and(
+          eq(waterIntake.userId, userId),
+          gte(waterIntake.date, startOfDay),
+          lt(waterIntake.date, endOfDay)
+        )
+      );
+    return water;
+  }
+
+  async updateWaterIntake(userId: string, glasses: number, date: Date): Promise<WaterIntake> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existing = await this.getWaterIntake(userId, date);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(waterIntake)
+        .set({ glasses })
+        .where(eq(waterIntake.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(waterIntake)
+        .values({ userId, glasses, date: startOfDay })
+        .returning();
+      return created;
+    }
+  }
+
+  // Restaurants
+  async getRestaurants(): Promise<Restaurant[]> {
+    return db.select().from(restaurants).orderBy(restaurants.name);
+  }
+
+  async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
+    return db
+      .select()
+      .from(menuItems)
+      .where(eq(menuItems.restaurantId, restaurantId))
+      .orderBy(menuItems.category, menuItems.name);
   }
 }
 

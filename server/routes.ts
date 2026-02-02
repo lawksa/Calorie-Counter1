@@ -20,8 +20,6 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
-  // Protected Routes Middleware
-  // We'll apply this to our API routes
   const requireAuth = isAuthenticated;
 
   // --- Meals ---
@@ -66,12 +64,12 @@ export async function registerRoutes(
     const userId = (req.user as any).claims.sub;
     const goal = await storage.getGoal(userId);
     if (!goal) {
-      // Return default goals if none exist
       return res.json({
         calories: 2000,
         protein: 150,
         carbs: 200,
-        fats: 65
+        fats: 65,
+        waterGlasses: 8
       });
     }
     res.json(goal);
@@ -94,18 +92,58 @@ export async function registerRoutes(
     }
   });
 
+  // --- Water ---
+  app.get(api.water.get.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const dateQuery = req.query.date as string | undefined;
+    const date = dateQuery ? new Date(dateQuery) : new Date();
+    
+    const water = await storage.getWaterIntake(userId, date);
+    res.json(water || { glasses: 0 });
+  });
+
+  app.post(api.water.update.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const input = api.water.update.input.parse(req.body);
+      const date = input.date ? new Date(input.date) : new Date();
+      const water = await storage.updateWaterIntake(userId, input.glasses, date);
+      res.json(water);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  // --- Restaurants ---
+  app.get(api.restaurants.list.path, requireAuth, async (req, res) => {
+    const restaurantsList = await storage.getRestaurants();
+    res.json(restaurantsList);
+  });
+
+  app.get(api.restaurants.getMenu.path, requireAuth, async (req, res) => {
+    const restaurantId = parseInt(req.params.id);
+    const menu = await storage.getMenuItems(restaurantId);
+    res.json(menu);
+  });
+
   // --- AI Estimate ---
   app.post(api.ai.estimate.path, requireAuth, async (req, res) => {
     try {
       const { query } = api.ai.estimate.input.parse(req.body);
       
       const response = await openai.chat.completions.create({
-        model: "gpt-5.2",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
             content: `You are a nutrition expert. Estimate the nutritional content for the provided food description. 
-            Return ONLY a JSON object with keys: name (short summary string), calories (number), protein (number), carbs (number), fats (number). 
+            Return ONLY a JSON object with keys: name (short summary string in Arabic), calories (number), protein (number), carbs (number), fats (number). 
             Do not include any markdown formatting or explanation.`
           },
           {
@@ -116,11 +154,9 @@ export async function registerRoutes(
       });
 
       const content = response.choices[0]?.message?.content || "{}";
-      // Clean up potential markdown code blocks
       const jsonStr = content.replace(/```json/g, "").replace(/```/g, "").trim();
       const estimate = JSON.parse(jsonStr);
       
-      // Basic validation of response structure
       if (!estimate.name || typeof estimate.calories !== 'number') {
         throw new Error("Invalid AI response format");
       }
@@ -131,9 +167,6 @@ export async function registerRoutes(
       res.status(500).json({ message: "Failed to estimate nutrition" });
     }
   });
-
-  // Seed Data (optional, mostly for first run if needed, but per user data is empty initially)
-  // We rely on user actions for this app.
 
   return httpServer;
 }

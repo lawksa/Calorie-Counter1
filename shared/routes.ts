@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertMealSchema, insertGoalSchema, meals, goals } from './schema';
+import { insertMealSchema, insertGoalSchema, insertWaterIntakeSchema, meals, goals, waterIntake, restaurants, menuItems } from './schema';
 
 // ============================================
 // SHARED ERROR SCHEMAS
@@ -26,7 +26,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/meals',
       input: z.object({
-        date: z.string().optional(), // ISO string YYYY-MM-DD
+        date: z.string().optional(),
       }).optional(),
       responses: {
         200: z.array(z.custom<typeof meals.$inferSelect>()),
@@ -56,7 +56,7 @@ export const api = {
       path: '/api/goals',
       responses: {
         200: z.custom<typeof goals.$inferSelect>(),
-        404: errorSchemas.notFound, // Or just return defaults if not found
+        404: errorSchemas.notFound,
       },
     },
     update: {
@@ -66,6 +66,46 @@ export const api = {
       responses: {
         200: z.custom<typeof goals.$inferSelect>(),
         400: errorSchemas.validation,
+      },
+    },
+  },
+  water: {
+    get: {
+      method: 'GET' as const,
+      path: '/api/water',
+      input: z.object({
+        date: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.custom<typeof waterIntake.$inferSelect>(),
+      },
+    },
+    update: {
+      method: 'POST' as const,
+      path: '/api/water',
+      input: z.object({
+        glasses: z.number().min(0),
+        date: z.string().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof waterIntake.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+  },
+  restaurants: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/restaurants',
+      responses: {
+        200: z.array(z.custom<typeof restaurants.$inferSelect>()),
+      },
+    },
+    getMenu: {
+      method: 'GET' as const,
+      path: '/api/restaurants/:id/menu',
+      responses: {
+        200: z.array(z.custom<typeof menuItems.$inferSelect>()),
       },
     },
   },
@@ -110,5 +150,6 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
 // ============================================
 export type MealInput = z.infer<typeof api.meals.create.input>;
 export type GoalInput = z.infer<typeof api.goals.update.input>;
+export type WaterInput = z.infer<typeof api.water.update.input>;
 export type EstimateInput = z.infer<typeof api.ai.estimate.input>;
 export type EstimateResponse = z.infer<typeof api.ai.estimate.responses[200]>;
