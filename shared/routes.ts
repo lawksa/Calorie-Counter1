@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { 
   insertMealSchema, insertGoalSchema, insertWaterIntakeSchema, insertWeightLogSchema, insertExerciseSchema,
-  insertBodyMeasurementSchema, insertDailyHabitSchema,
+  insertBodyMeasurementSchema, insertDailyHabitSchema, insertSavedFoodSchema,
   meals, goals, waterIntake, restaurants, menuItems, weightLogs, recipes, exercises, challenges, userChallenges,
-  bodyMeasurements, dailyHabits
+  bodyMeasurements, dailyHabits, savedFoods
 } from './schema';
 
 // ============================================
@@ -303,6 +303,32 @@ export const api = {
       responses: {
         200: z.custom<typeof dailyHabits.$inferSelect>(),
         400: errorSchemas.validation,
+      },
+    },
+  },
+
+  savedFoods: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/saved-foods',
+      responses: {
+        200: z.array(z.custom<typeof savedFoods.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/saved-foods',
+      input: insertSavedFoodSchema,
+      responses: {
+        201: z.custom<typeof savedFoods.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/saved-foods/:id',
+      responses: {
+        204: z.undefined(),
       },
     },
   },

@@ -486,5 +486,33 @@ export async function registerRoutes(
     }
   });
 
+  // --- Saved Foods ---
+  app.get(api.savedFoods.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const foods = await storage.getSavedFoods(userId);
+    res.json(foods);
+  });
+
+  app.post(api.savedFoods.create.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const input = api.savedFoods.create.input.parse(req.body);
+      const food = await storage.createSavedFood(userId, input);
+      res.status(201).json(food);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.savedFoods.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const id = parseInt(req.params.id);
+    await storage.deleteSavedFood(id, userId);
+    res.status(204).send();
+  });
+
   return httpServer;
 }
