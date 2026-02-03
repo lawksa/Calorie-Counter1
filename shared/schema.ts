@@ -33,6 +33,7 @@ export const meals = pgTable("meals", {
   protein: integer("protein").notNull(),
   carbs: integer("carbs").notNull(),
   fats: integer("fats").notNull(),
+  mealType: text("meal_type").notNull().default("other"), // breakfast, lunch, dinner, snack, other
   date: timestamp("date").notNull().defaultNow(),
 });
 

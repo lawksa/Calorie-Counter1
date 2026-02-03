@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { Loader2, Sparkles, Plus, UtensilsCrossed, Beef, Wheat, Droplets, Flame } from "lucide-react";
+import { Loader2, Sparkles, Plus, UtensilsCrossed, Beef, Wheat, Droplets, Flame, Sunrise, Sun, Moon, Cookie } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,20 @@ import { useCreateMeal, useEstimateCalories } from "@/hooks/use-meals";
 import { insertMealSchema } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Meal types with icons and colors
+const mealTypes = [
+  { value: "breakfast", label: "فطور", icon: Sunrise, color: "from-orange-400 to-yellow-400" },
+  { value: "lunch", label: "غداء", icon: Sun, color: "from-blue-400 to-cyan-400" },
+  { value: "dinner", label: "عشاء", icon: Moon, color: "from-purple-400 to-indigo-400" },
+  { value: "snack", label: "سناك", icon: Cookie, color: "from-pink-400 to-rose-400" },
+];
+
 const formSchema = insertMealSchema.extend({
   calories: z.coerce.number().min(0),
   protein: z.coerce.number().min(0),
   carbs: z.coerce.number().min(0),
   fats: z.coerce.number().min(0),
+  mealType: z.string().default("lunch"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -42,6 +51,8 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
   const [query, setQuery] = useState("");
   const [estimatedData, setEstimatedData] = useState<FormValues | null>(null);
 
+  const [selectedMealType, setSelectedMealType] = useState("lunch");
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -50,6 +61,7 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
       protein: 0,
       carbs: 0,
       fats: 0,
+      mealType: "lunch",
     },
   });
 
@@ -57,8 +69,9 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
     if (!query.trim()) return;
     try {
       const result = await estimateCalories.mutateAsync(query);
-      setEstimatedData(result);
-      form.reset(result);
+      const resultWithMealType = { ...result, mealType: selectedMealType };
+      setEstimatedData(resultWithMealType);
+      form.reset(resultWithMealType);
     } catch (error) {
       toast({
         title: "فشل التحليل",
@@ -76,17 +89,20 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
 
       await createMeal.mutateAsync({
         ...data,
+        mealType: selectedMealType,
         date: mealDate.toISOString(),
       });
       
+      const mealTypeLabel = mealTypes.find(t => t.value === selectedMealType)?.label || "";
       toast({
         title: "تمت الإضافة",
-        description: `تم تسجيل ${data.name} بنجاح.`,
+        description: `تم تسجيل ${data.name} في ${mealTypeLabel} بنجاح.`,
       });
       setOpen(false);
       form.reset();
       setQuery("");
       setEstimatedData(null);
+      setSelectedMealType("lunch");
     } catch (error) {
       toast({
         title: "خطأ",
@@ -114,6 +130,33 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
             {format(date, "d MMMM yyyy", { locale: ar })}
           </p>
         </DialogHeader>
+
+        {/* Meal Type Selector */}
+        <div className="px-6 pb-4">
+          <Label className="font-medium mb-2 block">نوع الوجبة</Label>
+          <div className="grid grid-cols-4 gap-2">
+            {mealTypes.map((type) => {
+              const Icon = type.icon;
+              const isSelected = selectedMealType === type.value;
+              return (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setSelectedMealType(type.value)}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
+                    isSelected 
+                      ? `bg-gradient-to-br ${type.color} text-white shadow-lg scale-105` 
+                      : "bg-muted hover:bg-muted/80"
+                  }`}
+                  data-testid={`button-meal-type-${type.value}`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-xs font-medium">{type.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <Tabs defaultValue="ai" className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="mx-6 mb-4 p-1 bg-muted rounded-xl">
