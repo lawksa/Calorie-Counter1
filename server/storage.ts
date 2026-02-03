@@ -1,16 +1,18 @@
 import { 
   users, goals, meals, waterIntake, restaurants, menuItems, 
   weightLogs, recipes, exercises, challenges, userChallenges,
-  bodyMeasurements, dailyHabits, savedFoods,
+  bodyMeasurements, dailyHabits, savedFoods, friendships, friendChallenges, friendChallengeParticipants,
   type User, type UpsertUser, type Goal, type InsertGoal, 
   type Meal, type InsertMeal, type WaterIntake, type Restaurant, type MenuItem,
   type WeightLog, type InsertWeightLog, type Recipe, type Exercise, type InsertExercise,
   type Challenge, type UserChallenge,
   type BodyMeasurement, type InsertBodyMeasurement, type DailyHabit, type InsertDailyHabit,
-  type SavedFood, type InsertSavedFood
+  type SavedFood, type InsertSavedFood,
+  type Friendship, type InsertFriendship, type FriendChallenge, type InsertFriendChallenge,
+  type FriendChallengeParticipant, type InsertFriendChallengeParticipant
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql, or, ne } from "drizzle-orm";
 
 export interface IStorage {
   // Auth
@@ -70,6 +72,22 @@ export interface IStorage {
   getSavedFoods(userId: string): Promise<SavedFood[]>;
   createSavedFood(userId: string, food: InsertSavedFood): Promise<SavedFood>;
   deleteSavedFood(id: number, userId: string): Promise<void>;
+
+  // Friendships
+  searchUsers(query: string, currentUserId: string): Promise<User[]>;
+  getFriends(userId: string): Promise<(Friendship & { friend: User })[]>;
+  getFriendRequests(userId: string): Promise<(Friendship & { requester: User })[]>;
+  sendFriendRequest(requesterId: string, addresseeUsername: string): Promise<Friendship>;
+  respondToFriendRequest(userId: string, requestId: number, accept: boolean): Promise<Friendship>;
+  removeFriend(userId: string, friendId: string): Promise<void>;
+  updateUsername(userId: string, username: string): Promise<User>;
+  getUserProfile(userId: string): Promise<User | undefined>;
+
+  // Friend Challenges
+  createFriendChallenge(creatorId: string, challenge: InsertFriendChallenge, participantIds: string[]): Promise<FriendChallenge>;
+  getFriendChallenges(userId: string): Promise<(FriendChallenge & { participants: (FriendChallengeParticipant & { user: User })[], creator: User })[]>;
+  updateChallengeProgress(userId: string, challengeId: number, value: number): Promise<FriendChallengeParticipant>;
+  getChallengeLeaderboard(challengeId: number): Promise<(FriendChallengeParticipant & { user: User })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -80,7 +98,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, username));
+    const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -479,6 +497,215 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSavedFood(id: number, userId: string): Promise<void> {
     await db.delete(savedFoods).where(and(eq(savedFoods.id, id), eq(savedFoods.userId, userId)));
+  }
+
+  // Friendships
+  async searchUsers(query: string, currentUserId: string): Promise<User[]> {
+    if (!query || query.length < 2) return [];
+    return db.select().from(users).where(
+      and(
+        ne(users.id, currentUserId),
+        or(
+          sql`${users.username} ILIKE ${'%' + query + '%'}`,
+          sql`${users.firstName} ILIKE ${'%' + query + '%'}`,
+          sql`${users.lastName} ILIKE ${'%' + query + '%'}`
+        )
+      )
+    ).limit(10);
+  }
+
+  async getFriends(userId: string): Promise<(Friendship & { friend: User })[]> {
+    const allFriendships = await db.select().from(friendships).where(
+      and(
+        eq(friendships.status, 'accepted'),
+        or(
+          eq(friendships.requesterId, userId),
+          eq(friendships.addresseeId, userId)
+        )
+      )
+    );
+
+    const result: (Friendship & { friend: User })[] = [];
+    for (const f of allFriendships) {
+      const friendId = f.requesterId === userId ? f.addresseeId : f.requesterId;
+      const friend = await this.getUser(friendId);
+      if (friend) {
+        result.push({ ...f, friend });
+      }
+    }
+    return result;
+  }
+
+  async getFriendRequests(userId: string): Promise<(Friendship & { requester: User })[]> {
+    const requests = await db.select().from(friendships).where(
+      and(
+        eq(friendships.addresseeId, userId),
+        eq(friendships.status, 'pending')
+      )
+    );
+
+    const result: (Friendship & { requester: User })[] = [];
+    for (const r of requests) {
+      const requester = await this.getUser(r.requesterId);
+      if (requester) {
+        result.push({ ...r, requester });
+      }
+    }
+    return result;
+  }
+
+  async sendFriendRequest(requesterId: string, addresseeUsername: string): Promise<Friendship> {
+    const addressee = await db.select().from(users).where(eq(users.username, addresseeUsername)).limit(1);
+    if (!addressee.length) {
+      throw new Error('User not found');
+    }
+    const addresseeId = addressee[0].id;
+
+    if (requesterId === addresseeId) {
+      throw new Error('Cannot send friend request to yourself');
+    }
+
+    const existing = await db.select().from(friendships).where(
+      or(
+        and(eq(friendships.requesterId, requesterId), eq(friendships.addresseeId, addresseeId)),
+        and(eq(friendships.requesterId, addresseeId), eq(friendships.addresseeId, requesterId))
+      )
+    ).limit(1);
+
+    if (existing.length) {
+      throw new Error('Friend request already exists');
+    }
+
+    const [friendship] = await db.insert(friendships).values({
+      requesterId,
+      addresseeId,
+      status: 'pending'
+    }).returning();
+    return friendship;
+  }
+
+  async respondToFriendRequest(userId: string, requestId: number, accept: boolean): Promise<Friendship> {
+    const [updated] = await db.update(friendships)
+      .set({ 
+        status: accept ? 'accepted' : 'rejected',
+        updatedAt: new Date()
+      })
+      .where(and(eq(friendships.id, requestId), eq(friendships.addresseeId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async removeFriend(userId: string, friendId: string): Promise<void> {
+    await db.delete(friendships).where(
+      and(
+        eq(friendships.status, 'accepted'),
+        or(
+          and(eq(friendships.requesterId, userId), eq(friendships.addresseeId, friendId)),
+          and(eq(friendships.requesterId, friendId), eq(friendships.addresseeId, userId))
+        )
+      )
+    );
+  }
+
+  async updateUsername(userId: string, username: string): Promise<User> {
+    const existing = await db.select().from(users).where(
+      and(eq(users.username, username), ne(users.id, userId))
+    ).limit(1);
+    if (existing.length) {
+      throw new Error('Username already taken');
+    }
+    const [updated] = await db.update(users).set({ username, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
+    return updated;
+  }
+
+  async getUserProfile(userId: string): Promise<User | undefined> {
+    return this.getUser(userId);
+  }
+
+  // Friend Challenges
+  async createFriendChallenge(creatorId: string, challenge: InsertFriendChallenge, participantIds: string[]): Promise<FriendChallenge> {
+    const [created] = await db.insert(friendChallenges).values({
+      ...challenge,
+      creatorId,
+      startDate: new Date(challenge.startDate),
+      endDate: new Date(challenge.endDate)
+    }).returning();
+
+    const allParticipants = [...new Set([creatorId, ...participantIds])];
+    for (const participantId of allParticipants) {
+      await db.insert(friendChallengeParticipants).values({
+        challengeId: created.id,
+        userId: participantId,
+        currentValue: 0,
+        completed: false
+      });
+    }
+
+    return created;
+  }
+
+  async getFriendChallenges(userId: string): Promise<(FriendChallenge & { participants: (FriendChallengeParticipant & { user: User })[], creator: User })[]> {
+    const participations = await db.select().from(friendChallengeParticipants).where(eq(friendChallengeParticipants.userId, userId));
+    const challengeIds = participations.map(p => p.challengeId);
+    
+    if (!challengeIds.length) return [];
+
+    const result: (FriendChallenge & { participants: (FriendChallengeParticipant & { user: User })[], creator: User })[] = [];
+
+    for (const challengeId of challengeIds) {
+      const [challenge] = await db.select().from(friendChallenges).where(eq(friendChallenges.id, challengeId));
+      if (!challenge) continue;
+
+      const participants = await db.select().from(friendChallengeParticipants).where(eq(friendChallengeParticipants.challengeId, challengeId));
+      const participantsWithUsers: (FriendChallengeParticipant & { user: User })[] = [];
+      
+      for (const p of participants) {
+        const user = await this.getUser(p.userId);
+        if (user) {
+          participantsWithUsers.push({ ...p, user });
+        }
+      }
+
+      const creator = await this.getUser(challenge.creatorId);
+      if (creator) {
+        result.push({
+          ...challenge,
+          participants: participantsWithUsers.sort((a, b) => b.currentValue - a.currentValue),
+          creator
+        });
+      }
+    }
+
+    return result.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+  }
+
+  async updateChallengeProgress(userId: string, challengeId: number, value: number): Promise<FriendChallengeParticipant> {
+    const [challenge] = await db.select().from(friendChallenges).where(eq(friendChallenges.id, challengeId));
+    const completed = value >= challenge.targetValue;
+    
+    const [updated] = await db.update(friendChallengeParticipants)
+      .set({ currentValue: value, completed })
+      .where(and(
+        eq(friendChallengeParticipants.challengeId, challengeId),
+        eq(friendChallengeParticipants.userId, userId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async getChallengeLeaderboard(challengeId: number): Promise<(FriendChallengeParticipant & { user: User })[]> {
+    const participants = await db.select().from(friendChallengeParticipants)
+      .where(eq(friendChallengeParticipants.challengeId, challengeId))
+      .orderBy(desc(friendChallengeParticipants.currentValue));
+
+    const result: (FriendChallengeParticipant & { user: User })[] = [];
+    for (const p of participants) {
+      const user = await this.getUser(p.userId);
+      if (user) {
+        result.push({ ...p, user });
+      }
+    }
+    return result;
   }
 }
 

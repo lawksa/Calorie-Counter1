@@ -514,5 +514,135 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // --- User Profile & Username ---
+  app.get("/api/profile", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const user = await storage.getUserProfile(userId);
+    res.json(user);
+  });
+
+  app.put("/api/profile/username", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { username } = req.body;
+      if (!username || username.length < 3) {
+        return res.status(400).json({ message: "اسم المستخدم يجب أن يكون 3 أحرف على الأقل" });
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return res.status(400).json({ message: "اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط" });
+      }
+      const user = await storage.updateUsername(userId, username);
+      res.json(user);
+    } catch (err: any) {
+      if (err.message === 'Username already taken') {
+        return res.status(400).json({ message: "اسم المستخدم مستخدم بالفعل" });
+      }
+      throw err;
+    }
+  });
+
+  // --- Users Search ---
+  app.get("/api/users/search", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const query = req.query.q as string || '';
+    const users = await storage.searchUsers(query, userId);
+    res.json(users);
+  });
+
+  // --- Friends ---
+  app.get("/api/friends", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const friends = await storage.getFriends(userId);
+    res.json(friends);
+  });
+
+  app.get("/api/friends/requests", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const requests = await storage.getFriendRequests(userId);
+    res.json(requests);
+  });
+
+  app.post("/api/friends/request", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { username } = req.body;
+      if (!username) {
+        return res.status(400).json({ message: "اسم المستخدم مطلوب" });
+      }
+      const friendship = await storage.sendFriendRequest(userId, username);
+      res.status(201).json(friendship);
+    } catch (err: any) {
+      if (err.message === 'User not found') {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+      if (err.message === 'Friend request already exists') {
+        return res.status(400).json({ message: "طلب الصداقة موجود بالفعل" });
+      }
+      if (err.message === 'Cannot send friend request to yourself') {
+        return res.status(400).json({ message: "لا يمكنك إرسال طلب صداقة لنفسك" });
+      }
+      throw err;
+    }
+  });
+
+  app.post("/api/friends/respond/:id", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const requestId = parseInt(req.params.id);
+    const { accept } = req.body;
+    const friendship = await storage.respondToFriendRequest(userId, requestId, accept === true);
+    res.json(friendship);
+  });
+
+  app.delete("/api/friends/:friendId", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const friendId = req.params.friendId;
+    await storage.removeFriend(userId, friendId);
+    res.status(204).send();
+  });
+
+  // --- Friend Challenges ---
+  app.get("/api/friend-challenges", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const challenges = await storage.getFriendChallenges(userId);
+    res.json(challenges);
+  });
+
+  app.post("/api/friend-challenges", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { title, description, type, targetValue, startDate, endDate, participantIds } = req.body;
+      if (!title || !type || !targetValue || !startDate || !endDate) {
+        return res.status(400).json({ message: "جميع الحقول مطلوبة" });
+      }
+      const challenge = await storage.createFriendChallenge(userId, {
+        creatorId: userId,
+        title,
+        description,
+        type,
+        targetValue,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        status: 'active'
+      }, participantIds || []);
+      res.status(201).json(challenge);
+    } catch (err) {
+      throw err;
+    }
+  });
+
+  app.put("/api/friend-challenges/:id/progress", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const challengeId = parseInt(req.params.id);
+    const { value } = req.body;
+    const participant = await storage.updateChallengeProgress(userId, challengeId, value);
+    res.json(participant);
+  });
+
+  app.get("/api/friend-challenges/:id/leaderboard", requireAuth, async (req, res) => {
+    const challengeId = parseInt(req.params.id);
+    const leaderboard = await storage.getChallengeLeaderboard(challengeId);
+    res.json(leaderboard);
+  });
+
   return httpServer;
 }

@@ -14,6 +14,7 @@ import Stats from "@/pages/Stats";
 import Exercises from "@/pages/Exercises";
 import Restaurants from "@/pages/Restaurants";
 import HealthConnect from "@/pages/HealthConnect";
+import Friends from "@/pages/Friends";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/exercises" component={Exercises} />
       <Route path="/settings" component={Settings} />
       <Route path="/health-connect" component={HealthConnect} />
+      <Route path="/friends" component={Friends} />
       <Route component={NotFound} />
     </Switch>
   );

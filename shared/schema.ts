@@ -167,6 +167,40 @@ export const savedFoods = pgTable("saved_foods", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Friendships - requests and confirmed friendships
+export const friendships = pgTable("friendships", {
+  id: serial("id").primaryKey(),
+  requesterId: text("requester_id").notNull().references(() => users.id),
+  addresseeId: text("addressee_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"), // pending, accepted, rejected
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Friend Challenges - challenges between friends
+export const friendChallenges = pgTable("friend_challenges", {
+  id: serial("id").primaryKey(),
+  creatorId: text("creator_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // calories_burned, steps, water, meals_logged
+  targetValue: integer("target_value").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  status: text("status").notNull().default("active"), // active, completed, cancelled
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Friend Challenge Participants - tracks who's participating and their progress
+export const friendChallengeParticipants = pgTable("friend_challenge_participants", {
+  id: serial("id").primaryKey(),
+  challengeId: integer("challenge_id").notNull().references(() => friendChallenges.id),
+  userId: text("user_id").notNull().references(() => users.id),
+  currentValue: integer("current_value").notNull().default(0),
+  completed: boolean("completed").notNull().default(false),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertGoalSchema = createInsertSchema(goals).omit({ id: true, userId: true, updatedAt: true });
@@ -182,6 +216,9 @@ export const insertUserChallengeSchema = createInsertSchema(userChallenges).omit
 export const insertBodyMeasurementSchema = createInsertSchema(bodyMeasurements).omit({ id: true, userId: true, date: true });
 export const insertDailyHabitSchema = createInsertSchema(dailyHabits).omit({ id: true, userId: true, date: true });
 export const insertSavedFoodSchema = createInsertSchema(savedFoods).omit({ id: true, userId: true, createdAt: true });
+export const insertFriendshipSchema = createInsertSchema(friendships).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFriendChallengeSchema = createInsertSchema(friendChallenges).omit({ id: true, createdAt: true });
+export const insertFriendChallengeParticipantSchema = createInsertSchema(friendChallengeParticipants).omit({ id: true, joinedAt: true });
 
 // === TYPES ===
 
@@ -223,6 +260,15 @@ export type InsertDailyHabit = z.infer<typeof insertDailyHabitSchema>;
 
 export type SavedFood = typeof savedFoods.$inferSelect;
 export type InsertSavedFood = z.infer<typeof insertSavedFoodSchema>;
+
+export type Friendship = typeof friendships.$inferSelect;
+export type InsertFriendship = z.infer<typeof insertFriendshipSchema>;
+
+export type FriendChallenge = typeof friendChallenges.$inferSelect;
+export type InsertFriendChallenge = z.infer<typeof insertFriendChallengeSchema>;
+
+export type FriendChallengeParticipant = typeof friendChallengeParticipants.$inferSelect;
+export type InsertFriendChallengeParticipant = z.infer<typeof insertFriendChallengeParticipantSchema>;
 
 // Request Types
 export type CreateMealRequest = InsertMeal & { date?: string };

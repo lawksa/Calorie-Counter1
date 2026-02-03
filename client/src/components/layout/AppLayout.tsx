@@ -12,7 +12,8 @@ import {
   X,
   Camera,
   ScanBarcode,
-  PenLine
+  PenLine,
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,15 +53,22 @@ export function AppLayout({ children, onManualAdd, onCameraAdd, onBarcodeAdd }: 
             </div>
           </div>
           
-          <Link href="/settings">
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-              {user?.profileImageUrl ? (
-                <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-5 h-5 text-muted-foreground" />
-              )}
-            </div>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/friends">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center" data-testid="button-friends">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+            </Link>
+            <Link href="/settings">
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                {user?.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5 text-muted-foreground" />
+                )}
+              </div>
+            </Link>
+          </div>
         </div>
       </header>
 
