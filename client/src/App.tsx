@@ -10,7 +10,6 @@ import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import Meals from "@/pages/Meals";
-import Restaurants from "@/pages/Restaurants";
 import Stats from "@/pages/Stats";
 import Recipes from "@/pages/Recipes";
 import Exercises from "@/pages/Exercises";
@@ -41,7 +40,6 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/meals" component={Meals} />
-      <Route path="/restaurants" component={Restaurants} />
       <Route path="/recipes" component={Recipes} />
       <Route path="/stats" component={Stats} />
       <Route path="/exercises" component={Exercises} />

@@ -2,11 +2,8 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   LayoutDashboard, 
-  UtensilsCrossed, 
-  Settings, 
   User,
   Flame,
-  Store,
   ChartLine,
   Dumbbell,
   CookingPot
@@ -19,7 +16,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { label: "الرئيسية", href: "/", icon: LayoutDashboard },
-    { label: "المطاعم", href: "/restaurants", icon: Store },
     { label: "الوصفات", href: "/recipes", icon: CookingPot },
     { label: "التمارين", href: "/exercises", icon: Dumbbell },
     { label: "الإحصائيات", href: "/stats", icon: ChartLine },
