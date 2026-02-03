@@ -304,16 +304,16 @@ export default function Exercises() {
           </TabsList>
 
           <TabsContent value="exercises" className="mt-4 space-y-6">
-            {/* Add Exercise Button */}
-            <div className="flex items-center justify-between">
+            {/* Date and Add Button */}
+            <div className="flex items-center justify-between gap-2">
               <DateSelector date={date} onDateChange={setDate} />
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-xl gap-2">
-                <Plus className="w-4 h-4" />
-                إضافة
-              </Button>
-            </DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button className="rounded-xl gap-2" data-testid="button-add-exercise">
+                    <Plus className="w-4 h-4" />
+                    إضافة
+                  </Button>
+                </DialogTrigger>
             <DialogContent dir="rtl" className="sm:max-w-[450px] max-h-[85vh] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
@@ -642,12 +642,10 @@ export default function Exercises() {
                 </AnimatePresence>
               </div>
             </DialogContent>
-          </Dialog>
-        </div>
+              </Dialog>
+            </div>
 
-        <DateSelector date={date} onDateChange={setDate} />
-
-        {/* Summary */}
+            {/* Summary */}
         <div className="grid grid-cols-2 gap-3">
           <Card className="p-4 border-0 shadow-sm">
             <div className="flex items-center gap-3">
