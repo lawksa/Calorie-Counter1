@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WorkoutPlans } from "@/components/exercises/WorkoutPlans";
 import { 
   Loader2, 
   Dumbbell, 
@@ -43,7 +45,9 @@ import {
   Hand,
   Camera,
   ImagePlus,
-  X
+  X,
+  CalendarDays,
+  ListChecks
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -280,13 +284,30 @@ export default function Exercises() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">التمارين</h1>
-            <p className="text-muted-foreground">سجل نشاطك الرياضي</p>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-bold">التمارين</h1>
+          <p className="text-muted-foreground text-sm">سجل نشاطك الرياضي واختر خطة تمارينك</p>
+        </div>
+
+        {/* Tabs for switching between exercises and workout plans */}
+        <Tabs defaultValue="exercises" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 h-12 rounded-xl">
+            <TabsTrigger value="exercises" className="rounded-lg gap-2 data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-exercises">
+              <CalendarDays className="w-4 h-4" />
+              تمارين اليوم
+            </TabsTrigger>
+            <TabsTrigger value="plans" className="rounded-lg gap-2 data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-plans">
+              <ListChecks className="w-4 h-4" />
+              خطط التمارين
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="exercises" className="mt-4 space-y-6">
+            {/* Add Exercise Button */}
+            <div className="flex items-center justify-between">
+              <DateSelector date={date} onDateChange={setDate} />
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-xl gap-2">
                 <Plus className="w-4 h-4" />
@@ -699,29 +720,36 @@ export default function Exercises() {
           })}
         </div>
 
-        {exercises?.length === 0 && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="py-8"
-          >
-            <button
-              onClick={() => setDialogOpen(true)}
-              className="w-full p-6 rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-4 group"
-              data-testid="add-exercise-empty"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-                <Plus className="w-8 h-8 text-primary" />
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-lg mb-1">أضف تمرينك الأول</p>
-                <p className="text-muted-foreground text-sm">
-                  الحركة بركة! ابدأ يومك بنشاط بدني
-                </p>
-              </div>
-            </button>
-          </motion.div>
-        )}
+            {exercises?.length === 0 && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="py-8"
+              >
+                <button
+                  onClick={() => setDialogOpen(true)}
+                  className="w-full p-6 rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-4 group"
+                  data-testid="add-exercise-empty"
+                >
+                  <div className="w-16 h-16 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+                    <Plus className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-lg mb-1">أضف تمرينك الأول</p>
+                    <p className="text-muted-foreground text-sm">
+                      الحركة بركة! ابدأ يومك بنشاط بدني
+                    </p>
+                  </div>
+                </button>
+              </motion.div>
+            )}
+            </TabsContent>
+
+          {/* Workout Plans Tab */}
+          <TabsContent value="plans" className="mt-4">
+            <WorkoutPlans />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
