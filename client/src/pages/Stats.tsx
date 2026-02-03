@@ -42,6 +42,7 @@ import { BodyMeasurementsCard } from "@/components/stats/BodyMeasurementsCard";
 import { LifeScoreCard } from "@/components/stats/LifeScoreCard";
 import { ProgressCard } from "@/components/stats/ProgressCard";
 import { BMICard } from "@/components/stats/BMICard";
+import { AchievementsCard } from "@/components/stats/AchievementsCard";
 import { useGoals, useUpdateGoals } from "@/hooks/use-goals";
 
 const dayLabels: Record<string, string> = {
@@ -53,6 +54,54 @@ const dayLabels: Record<string, string> = {
   "5": "الجمعة",
   "6": "السبت",
 };
+
+function calculateStreak(stats: any, goals: any): number {
+  if (!stats || !goals) return 0;
+  
+  const caloriesGoal = goals.calories || 2000;
+  const waterGoal = 30;
+  
+  let streak = 0;
+  
+  for (let i = stats.calories.length - 1; i >= 0; i--) {
+    const calories = stats.calories[i]?.value || 0;
+    const water = stats.water[i]?.value || 0;
+    
+    const caloriesOk = calories > 0 && calories <= caloriesGoal * 1.1;
+    const waterOk = water >= waterGoal * 0.8;
+    
+    if (caloriesOk && waterOk) {
+      streak++;
+    } else if (calories > 0 || water > 0) {
+      break;
+    }
+  }
+  
+  return streak;
+}
+
+function calculateTotalPerfectDays(stats: any, goals: any): number {
+  if (!stats || !goals) return 0;
+  
+  const caloriesGoal = goals.calories || 2000;
+  const waterGoal = 30;
+  
+  let total = 0;
+  
+  for (let i = 0; i < stats.calories.length; i++) {
+    const calories = stats.calories[i]?.value || 0;
+    const water = stats.water[i]?.value || 0;
+    
+    const caloriesOk = calories > 0 && calories <= caloriesGoal * 1.1;
+    const waterOk = water >= waterGoal * 0.8;
+    
+    if (caloriesOk && waterOk) {
+      total++;
+    }
+  }
+  
+  return total;
+}
 
 export default function Stats() {
   const { data: stats, isLoading: statsLoading } = useWeeklyStats();
@@ -149,6 +198,14 @@ export default function Stats() {
         {/* Weekly Progress */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <ProgressCard weeklyStats={stats || null} goals={goals || null} />
+        </motion.div>
+
+        {/* Achievements Tree */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <AchievementsCard 
+            currentStreak={calculateStreak(stats, goals)}
+            totalPerfectDays={calculateTotalPerfectDays(stats, goals)}
+          />
         </motion.div>
 
         {/* Quick Stats */}
