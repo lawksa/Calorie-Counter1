@@ -13,6 +13,7 @@ import Meals from "@/pages/Meals";
 import Stats from "@/pages/Stats";
 import Exercises from "@/pages/Exercises";
 import Restaurants from "@/pages/Restaurants";
+import HealthConnect from "@/pages/HealthConnect";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/stats" component={Stats} />
       <Route path="/exercises" component={Exercises} />
       <Route path="/settings" component={Settings} />
+      <Route path="/health-connect" component={HealthConnect} />
       <Route component={NotFound} />
     </Switch>
   );

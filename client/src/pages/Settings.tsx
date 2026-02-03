@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Loader2, Save, Target, LogOut, User, Flame, Beef, Wheat, Droplets, GlassWater, Calculator, ChevronDown, ChevronUp, Sparkles, Check } from "lucide-react";
+import { Loader2, Save, Target, LogOut, User, Flame, Beef, Wheat, Droplets, GlassWater, Calculator, ChevronDown, ChevronUp, Sparkles, Check, Watch, ChevronLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -599,6 +600,33 @@ export default function Settings() {
               </Button>
             </form>
           </Card>
+        </motion.div>
+
+        {/* Health Connect Link */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <Link href="/health-connect">
+            <Card className="p-5 border-0 shadow-md hover-elevate cursor-pointer" data-testid="link-health-connect">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
+                    <Watch className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold">ربط الساعات الذكية</h3>
+                    <p className="text-sm text-muted-foreground">Apple Health و Health Connect</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-full">قريباً</span>
+                  <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </div>
+            </Card>
+          </Link>
         </motion.div>
       </div>
     </AppLayout>
