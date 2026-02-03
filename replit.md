@@ -45,7 +45,19 @@ The application is designed for Arabic (RTL) layout with `dir="rtl"` on root ele
 
 ### Database
 - **PostgreSQL**: Primary data store accessed via `DATABASE_URL` environment variable
-- Tables: users, sessions, goals, meals, water_intake, restaurants, menu_items, conversations, messages
+- Tables: users, sessions, goals, meals, water_intake, restaurants, menu_items, conversations, messages, weight_logs, recipes, exercises, challenges, user_challenges
+
+## Recent Changes (February 2026)
+
+### New Features Added
+1. **Weight Tracking** - Log weight with chart visualization in Stats page
+2. **Recipes Library** - 12 healthy Arabic recipes with nutritional info and categories
+3. **Statistics Dashboard** - Weekly charts for calories, macros, water, weight trends
+4. **Exercise Tracking** - 10 preset exercises with calorie burn calculation
+5. **Daily Challenges** - 8 challenges with completion tracking and points system
+
+### Navigation
+Bottom navigation with 5 tabs: Home, Restaurants, Recipes, Exercises, Stats
 
 ### AI Services
 - **OpenAI API**: Used for meal calorie estimation via AI Integrations
