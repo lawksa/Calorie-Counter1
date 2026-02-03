@@ -40,7 +40,10 @@ import {
   Armchair,
   Shield,
   CircleUser,
-  Hand
+  Hand,
+  Camera,
+  ImagePlus,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -197,8 +200,21 @@ export default function Exercises() {
   const [customName, setCustomName] = useState("");
   const [customType, setCustomType] = useState<string>("cardio");
   const [customCalories, setCustomCalories] = useState("");
+  const [customWeight, setCustomWeight] = useState("");
+  const [customImage, setCustomImage] = useState<string | null>(null);
   const [isCustom, setIsCustom] = useState(false);
   const [exerciseLocation, setExerciseLocation] = useState<ExerciseLocation>(null);
+
+  const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCustomImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   
   const { data: exercises, isLoading } = useExercises(date);
   const createExercise = useCreateExercise();
@@ -241,6 +257,8 @@ export default function Exercises() {
     setWeight("");
     setCustomName("");
     setCustomCalories("");
+    setCustomWeight("");
+    setCustomImage(null);
     setExerciseLocation(null);
     toast({ title: "تم", description: "تم إضافة التمرين" });
   };
@@ -451,19 +469,72 @@ export default function Exercises() {
                         </>
                       ) : (
                         <>
+                          {/* Image Capture */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Camera className="w-4 h-4 text-primary" />
+                              صورة الجهاز (اختياري)
+                            </Label>
+                            {customImage ? (
+                              <div className="relative">
+                                <img 
+                                  src={customImage} 
+                                  alt="صورة الجهاز" 
+                                  className="w-full h-32 object-cover rounded-xl"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute top-2 left-2 w-8 h-8 rounded-full"
+                                  onClick={() => setCustomImage(null)}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2">
+                                <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
+                                  <Camera className="w-6 h-6 text-muted-foreground mb-1" />
+                                  <span className="text-xs text-muted-foreground">التقط صورة</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    className="hidden"
+                                    onChange={handleImageCapture}
+                                    data-testid="input-camera-capture"
+                                  />
+                                </label>
+                                <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
+                                  <ImagePlus className="w-6 h-6 text-muted-foreground mb-1" />
+                                  <span className="text-xs text-muted-foreground">اختر من المعرض</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleImageCapture}
+                                    data-testid="input-image-gallery"
+                                  />
+                                </label>
+                              </div>
+                            )}
+                          </div>
+
                           <div>
-                            <Label>اسم التمرين</Label>
+                            <Label>اسم الجهاز / التمرين</Label>
                             <Input
-                              placeholder="اسم التمرين"
+                              placeholder="مثال: جهاز سحب أمامي"
                               value={customName}
                               onChange={(e) => setCustomName(e.target.value)}
                               className="h-12"
+                              data-testid="input-custom-exercise-name"
                             />
                           </div>
                           <div>
                             <Label>النوع</Label>
                             <Select value={customType} onValueChange={setCustomType}>
-                              <SelectTrigger className="h-12">
+                              <SelectTrigger className="h-12" data-testid="select-custom-type">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -475,28 +546,65 @@ export default function Exercises() {
                               </SelectContent>
                             </Select>
                           </div>
+                          
+                          {/* Weight field for custom exercises */}
+                          <div className="bg-muted/50 p-3 rounded-xl">
+                            <Label className="flex items-center gap-2 text-sm font-medium mb-2">
+                              <Weight className="w-4 h-4 text-blue-500" />
+                              الوزن (كجم) - اختياري
+                            </Label>
+                            <Input
+                              type="number"
+                              placeholder="مثال: 20"
+                              value={customWeight}
+                              onChange={(e) => setCustomWeight(e.target.value)}
+                              className="h-11 text-center"
+                              data-testid="input-custom-weight"
+                            />
+                          </div>
+
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <Label>المدة (دقائق)</Label>
+                              <Label className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-orange-500" />
+                                المدة (دقائق)
+                              </Label>
                               <Input
                                 type="number"
                                 placeholder="30"
                                 value={duration}
                                 onChange={(e) => setDuration(e.target.value)}
                                 className="h-12 text-center"
+                                data-testid="input-custom-duration"
                               />
                             </div>
                             <div>
-                              <Label>السعرات المحروقة</Label>
+                              <Label className="flex items-center gap-2">
+                                <Flame className="w-4 h-4 text-red-500" />
+                                السعرات المحروقة
+                              </Label>
                               <Input
                                 type="number"
                                 placeholder="200"
                                 value={customCalories}
                                 onChange={(e) => setCustomCalories(e.target.value)}
                                 className="h-12 text-center"
+                                data-testid="input-custom-calories"
                               />
                             </div>
                           </div>
+
+                          {/* Preview */}
+                          {customName && duration && customCalories && (
+                            <div className="bg-gradient-to-br from-primary/10 to-emerald-500/10 p-3 rounded-xl">
+                              <p className="text-sm text-center text-muted-foreground">
+                                <span className="font-bold text-foreground">{customName}</span>
+                                {customWeight && <span> | {customWeight} كجم</span>}
+                                <span> | {duration} دقيقة</span>
+                                <span className="text-primary font-bold"> | {customCalories} سعرة</span>
+                              </p>
+                            </div>
+                          )}
                         </>
                       )}
 
