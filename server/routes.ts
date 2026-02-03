@@ -67,6 +67,61 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // --- Meal Image Analysis ---
+  app.post("/api/analyze-meal-image", requireAuth, async (req, res) => {
+    try {
+      const { image } = req.body;
+      if (!image) {
+        return res.status(400).json({ success: false, error: "No image provided" });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `أنت خبير تغذية. قم بتحليل صورة الطعام وقدم تقديراً للسعرات الحرارية والقيم الغذائية.
+أجب بتنسيق JSON فقط بدون أي نص إضافي:
+{
+  "name": "اسم الوجبة بالعربية",
+  "calories": رقم السعرات الحرارية,
+  "protein": رقم البروتين بالجرام,
+  "carbs": رقم الكربوهيدرات بالجرام,
+  "fats": رقم الدهون بالجرام
+}`
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: { url: image }
+              },
+              {
+                type: "text",
+                text: "حلل هذه الوجبة وأعطني القيم الغذائية التقريبية"
+              }
+            ]
+          }
+        ],
+        max_tokens: 500
+      });
+
+      const content = response.choices[0]?.message?.content || "";
+      
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const meal = JSON.parse(jsonMatch[0]);
+        res.json({ success: true, meal });
+      } else {
+        res.json({ success: false, error: "Could not parse response" });
+      }
+    } catch (error: any) {
+      console.error("Meal analysis error:", error);
+      res.json({ success: false, error: error.message || "Analysis failed" });
+    }
+  });
+
   // --- Goals ---
   app.get(api.goals.get.path, requireAuth, async (req, res) => {
     const userId = (req.user as any).claims.sub;

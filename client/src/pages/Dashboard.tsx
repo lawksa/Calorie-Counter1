@@ -12,6 +12,7 @@ import { DateSelector } from "@/components/common/DateSelector";
 import { AddMealDialog } from "@/components/meals/AddMealDialog";
 import { DailyChallenges } from "@/components/dashboard/DailyChallenges";
 import { HabitsTracker } from "@/components/dashboard/HabitsTracker";
+import { FloatingAddButton } from "@/components/dashboard/FloatingAddButton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -51,6 +52,7 @@ function categorizeMeal(date: Date): MealCategory {
 export default function Dashboard() {
   const [date, setDate] = useState<Date>(new Date());
   const [expandedCategory, setExpandedCategory] = useState<MealCategory | null>(null);
+  const [addMealOpen, setAddMealOpen] = useState(false);
   const { data: meals, isLoading: mealsLoading } = useMeals(date);
   const { data: goals, isLoading: goalsLoading } = useGoals();
   const { data: waterData, isLoading: waterLoading } = useWaterIntake(date);
@@ -333,6 +335,16 @@ export default function Dashboard() {
           </motion.div>
         )}
       </div>
+
+      {/* Floating Add Button */}
+      <FloatingAddButton onManualAdd={() => setAddMealOpen(true)} />
+
+      {/* Hidden Add Meal Dialog for external trigger */}
+      <AddMealDialog 
+        date={date} 
+        externalOpen={addMealOpen} 
+        onExternalOpenChange={setAddMealOpen} 
+      />
     </AppLayout>
   );
 }

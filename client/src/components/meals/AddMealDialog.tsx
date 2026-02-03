@@ -25,8 +25,16 @@ const formSchema = insertMealSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function AddMealDialog({ date }: { date: Date }) {
-  const [open, setOpen] = useState(false);
+interface AddMealDialogProps {
+  date: Date;
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
+}
+
+export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddMealDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onExternalOpenChange || setInternalOpen;
   const { toast } = useToast();
   const createMeal = useCreateMeal();
   const estimateCalories = useEstimateCalories();
@@ -88,13 +96,17 @@ export function AddMealDialog({ date }: { date: Date }) {
     }
   };
 
+  const isExternallyControlled = externalOpen !== undefined;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="rounded-2xl shadow-lg hover:shadow-xl transition-all gap-2 px-5 bg-gradient-to-r from-primary to-emerald-500">
-          <Plus className="w-5 h-5" /> إضافة وجبة
-        </Button>
-      </DialogTrigger>
+      {!isExternallyControlled && (
+        <DialogTrigger asChild>
+          <Button className="rounded-2xl shadow-lg hover:shadow-xl transition-all gap-2 px-5 bg-gradient-to-r from-primary to-emerald-500">
+            <Plus className="w-5 h-5" /> إضافة وجبة
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-hidden flex flex-col p-0" dir="rtl">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-2xl font-bold">تسجيل وجبة</DialogTitle>
