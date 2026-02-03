@@ -167,6 +167,24 @@ export default function Settings() {
     }
   }, [goals, form]);
 
+  // Auto-calculate calories when macros change
+  const watchedProtein = form.watch("protein");
+  const watchedCarbs = form.watch("carbs");
+  const watchedFats = form.watch("fats");
+
+  useEffect(() => {
+    const protein = Number(watchedProtein) || 0;
+    const carbs = Number(watchedCarbs) || 0;
+    const fats = Number(watchedFats) || 0;
+    
+    // Calculate calories: protein*4 + carbs*4 + fats*9
+    const calculatedCalories = Math.round((protein * 4) + (carbs * 4) + (fats * 9));
+    
+    if (calculatedCalories > 0) {
+      form.setValue("calories", calculatedCalories);
+    }
+  }, [watchedProtein, watchedCarbs, watchedFats, form]);
+
   const handleCalculate = () => {
     const weight = parseFloat(calcWeight);
     const height = parseFloat(calcHeight);
@@ -502,23 +520,30 @@ export default function Settings() {
             </div>
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              {/* Calories */}
+              {/* Calories - Auto Calculated */}
               <div className="space-y-2">
                 <Label htmlFor="calories" className="flex items-center gap-2 font-bold">
                   <Flame className="w-4 h-4 text-primary" />
                   السعرات الحرارية اليومية
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-normal mr-auto">
+                    تحسب تلقائياً
+                  </span>
                 </Label>
                 <div className="relative">
                   <Input 
                     id="calories" 
                     type="number" 
                     {...form.register("calories")} 
-                    className="h-14 text-2xl font-bold text-center rounded-xl border-primary/30 focus-visible:ring-primary"
+                    readOnly
+                    className="h-14 text-2xl font-bold text-center rounded-xl border-primary/30 bg-primary/5 cursor-default"
                   />
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
                     سعرة
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  = (بروتين × 4) + (كربوهيدرات × 4) + (دهون × 9)
+                </p>
               </div>
 
               {/* Macros Grid */}
