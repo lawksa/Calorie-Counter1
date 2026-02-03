@@ -18,6 +18,7 @@ export const goals = pgTable("goals", {
   carbs: integer("carbs").notNull().default(200),
   fats: integer("fats").notNull().default(65),
   waterGlasses: integer("water_glasses").notNull().default(8),
+  burnedCaloriesGoal: integer("burned_calories_goal").notNull().default(500),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 

@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useMeals, useDeleteMeal, useCreateMeal } from "@/hooks/use-meals";
+import { useExercises } from "@/hooks/use-exercises";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { useGoals } from "@/hooks/use-goals";
 import { useWaterIntake, useUpdateWaterIntake } from "@/hooks/use-water";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CalorieRing } from "@/components/dashboard/CalorieRing";
+import { SmallCalorieRing } from "@/components/dashboard/SmallCalorieRing";
 import { MacroCard } from "@/components/dashboard/MacroCard";
 import { WaterTracker } from "@/components/dashboard/WaterTracker";
 import { DateSelector } from "@/components/common/DateSelector";
@@ -106,6 +108,7 @@ export default function Dashboard() {
   });
   const { data: goals, isLoading: goalsLoading } = useGoals();
   const { data: waterData, isLoading: waterLoading } = useWaterIntake(date);
+  const { data: exercises } = useExercises(date);
   const updateWater = useUpdateWaterIntake();
   const deleteMeal = useDeleteMeal();
   const createMeal = useCreateMeal();
@@ -214,9 +217,13 @@ export default function Dashboard() {
     carbs: 200,
     fats: 65,
     waterGlasses: 8,
+    burnedCaloriesGoal: 500,
   };
 
   const waterGlasses = waterData?.glasses || 0;
+
+  const burnedCalories = exercises?.reduce((sum, ex) => sum + ex.caloriesBurned, 0) || 0;
+  const netCalories = totals.calories - burnedCalories;
 
   const handleWaterUpdate = (glasses: number) => {
     updateWater.mutate({
@@ -269,6 +276,38 @@ export default function Dashboard() {
                   <p className="text-muted-foreground">الهدف</p>
                 </div>
               </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Burned & Net Calories Rings */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.05 }}
+        >
+          <Card className="p-5 border-0 shadow-md">
+            <div className="flex justify-around items-start">
+              <SmallCalorieRing
+                value={burnedCalories}
+                target={target.burnedCaloriesGoal || 500}
+                label="السعرات المحروقة"
+                gradientId="burnedGradient"
+                gradientColors={["hsl(25 95% 53%)", "hsl(0 84% 60%)"]}
+                showRemaining={true}
+              />
+              <SmallCalorieRing
+                value={Math.abs(netCalories)}
+                target={target.calories}
+                label={netCalories >= 0 ? "صافي السعرات" : "عجز السعرات"}
+                subLabel={netCalories >= 0 ? "فائض" : "عجز"}
+                gradientId="netGradient"
+                gradientColors={netCalories >= 0 ? ["hsl(158 64% 52%)", "hsl(142 71% 45%)"] : ["hsl(200 80% 50%)", "hsl(220 80% 60%)"]}
+                showRemaining={false}
+              />
+            </div>
+            <div className="mt-4 text-center text-xs text-muted-foreground">
+              <p>المستهلك: {totals.calories} - المحروق: {burnedCalories} = {netCalories >= 0 ? '+' : ''}{netCalories} سعرة</p>
             </div>
           </Card>
         </motion.div>
