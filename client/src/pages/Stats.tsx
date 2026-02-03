@@ -41,7 +41,8 @@ import {
 import { BodyMeasurementsCard } from "@/components/stats/BodyMeasurementsCard";
 import { LifeScoreCard } from "@/components/stats/LifeScoreCard";
 import { ProgressCard } from "@/components/stats/ProgressCard";
-import { useGoals } from "@/hooks/use-goals";
+import { BMICard } from "@/components/stats/BMICard";
+import { useGoals, useUpdateGoals } from "@/hooks/use-goals";
 
 const dayLabels: Record<string, string> = {
   "0": "الأحد",
@@ -57,10 +58,24 @@ export default function Stats() {
   const { data: stats, isLoading: statsLoading } = useWeeklyStats();
   const { data: weightLogs, isLoading: weightLoading } = useWeightLogs();
   const { data: goals } = useGoals();
+  const updateGoals = useUpdateGoals();
   const createWeight = useCreateWeightLog();
   const [newWeight, setNewWeight] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const handleUpdateProfile = async (data: { height?: number; targetWeight?: number }) => {
+    await updateGoals.mutateAsync({
+      ...goals,
+      calories: goals?.calories || 2000,
+      protein: goals?.protein || 150,
+      carbs: goals?.carbs || 200,
+      fats: goals?.fats || 65,
+      waterGlasses: goals?.waterGlasses || 8,
+      height: data.height ?? goals?.height ?? undefined,
+      targetWeight: data.targetWeight ?? goals?.targetWeight ?? undefined,
+    });
+  };
 
   const handleAddWeight = async () => {
     const weightKg = parseFloat(newWeight);
@@ -119,6 +134,16 @@ export default function Stats() {
         {/* Life Score */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <LifeScoreCard />
+        </motion.div>
+
+        {/* BMI & Profile */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}>
+          <BMICard
+            height={goals?.height || null}
+            currentWeight={weightLogs?.[0]?.weight || null}
+            targetWeight={goals?.targetWeight || null}
+            onUpdate={handleUpdateProfile}
+          />
         </motion.div>
 
         {/* Weekly Progress */}
