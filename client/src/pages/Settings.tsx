@@ -184,16 +184,31 @@ export default function Settings() {
     setCalculatedResults(results);
   };
 
-  const applyCalculatedValues = () => {
+  const applyCalculatedValues = async () => {
     if (calculatedResults) {
-      form.setValue("calories", calculatedResults.calories);
-      form.setValue("protein", calculatedResults.protein);
-      form.setValue("carbs", calculatedResults.carbs);
-      form.setValue("fats", calculatedResults.fats);
-      toast({
-        title: "تم تطبيق القيم",
-        description: "تم نقل القيم المحسوبة إلى أهدافك اليومية",
-      });
+      const currentValues = form.getValues();
+      const newGoals = {
+        ...currentValues,
+        calories: calculatedResults.calories,
+        protein: calculatedResults.protein,
+        carbs: calculatedResults.carbs,
+        fats: calculatedResults.fats,
+      };
+      
+      try {
+        await updateGoals.mutateAsync(newGoals);
+        form.reset(newGoals);
+        toast({
+          title: "تم الحفظ",
+          description: "تم تطبيق وحفظ القيم المحسوبة بنجاح",
+        });
+      } catch (error) {
+        toast({
+          title: "خطأ",
+          description: "فشل في حفظ الأهداف الجديدة",
+          variant: "destructive",
+        });
+      }
     }
   };
 
