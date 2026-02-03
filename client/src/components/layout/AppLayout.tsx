@@ -6,19 +6,24 @@ import {
   Flame,
   ChartLine,
   Dumbbell,
-  CookingPot,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Plus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+interface AppLayoutProps {
+  children: React.ReactNode;
+  onAddClick?: () => void;
+}
+
+export function AppLayout({ children, onAddClick }: AppLayoutProps) {
   const [location] = useLocation();
   const { user } = useAuth();
 
   const navItems = [
     { label: "الرئيسية", href: "/", icon: LayoutDashboard },
     { label: "المطاعم", href: "/restaurants", icon: UtensilsCrossed },
-    { label: "الوصفات", href: "/recipes", icon: CookingPot },
+    { label: "add", href: null, icon: Plus, isAddButton: true },
     { label: "التمارين", href: "/exercises", icon: Dumbbell },
     { label: "الإحصائيات", href: "/stats", icon: ChartLine },
   ];
@@ -61,9 +66,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t pb-safe">
         <div className="max-w-lg mx-auto flex items-center justify-around py-1">
           {navItems.map((item) => {
+            if (item.isAddButton) {
+              return (
+                <button
+                  key="add-button"
+                  onClick={onAddClick}
+                  className="flex flex-col items-center gap-0.5 px-2 py-2"
+                  data-testid="button-nav-add"
+                >
+                  <div className="w-12 h-12 -mt-6 rounded-full bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center shadow-lg">
+                    <Plus className="w-6 h-6 text-white" />
+                  </div>
+                </button>
+              );
+            }
+            
             const isActive = location === item.href;
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.href} href={item.href!}>
                 <div className={cn(
                   "flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-all duration-300",
                   isActive 

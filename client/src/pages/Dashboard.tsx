@@ -12,7 +12,6 @@ import { DateSelector } from "@/components/common/DateSelector";
 import { AddMealDialog } from "@/components/meals/AddMealDialog";
 import { DailyChallenges } from "@/components/dashboard/DailyChallenges";
 import { HabitsTracker } from "@/components/dashboard/HabitsTracker";
-import { FloatingAddButton } from "@/components/dashboard/FloatingAddButton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -109,7 +108,7 @@ export default function Dashboard() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout onAddClick={() => setAddMealOpen(true)}>
       <div className="flex flex-col gap-6">
         {/* Date Selector */}
         <DateSelector date={date} onDateChange={setDate} />
@@ -336,9 +335,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Floating Add Button */}
-      <FloatingAddButton onManualAdd={() => setAddMealOpen(true)} />
-
       {/* Hidden Add Meal Dialog for external trigger */}
       <AddMealDialog 
         date={date} 
@@ -348,3 +344,4 @@ export default function Dashboard() {
     </AppLayout>
   );
 }
+

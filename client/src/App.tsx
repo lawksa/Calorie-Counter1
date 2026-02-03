@@ -11,7 +11,6 @@ import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import Meals from "@/pages/Meals";
 import Stats from "@/pages/Stats";
-import Recipes from "@/pages/Recipes";
 import Exercises from "@/pages/Exercises";
 import Restaurants from "@/pages/Restaurants";
 import NotFound from "@/pages/not-found";
@@ -42,7 +41,6 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/meals" component={Meals} />
       <Route path="/restaurants" component={Restaurants} />
-      <Route path="/recipes" component={Recipes} />
       <Route path="/stats" component={Stats} />
       <Route path="/exercises" component={Exercises} />
       <Route path="/settings" component={Settings} />
