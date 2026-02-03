@@ -240,7 +240,10 @@ export default function Dashboard() {
 
   // Group meals by category
   const mealsByCategory = meals?.reduce((acc, meal) => {
-    const category = categorizeMeal(new Date(meal.date));
+    // Use the meal's mealType field that user selected, fallback to time-based categorization
+    const category = (meal.mealType && ['breakfast', 'lunch', 'dinner', 'snack'].includes(meal.mealType)) 
+      ? meal.mealType as MealCategory 
+      : categorizeMeal(new Date(meal.date));
     if (!acc[category]) acc[category] = [];
     acc[category].push(meal);
     return acc;
