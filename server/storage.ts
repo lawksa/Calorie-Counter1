@@ -1,10 +1,12 @@
 import { 
   users, goals, meals, waterIntake, restaurants, menuItems, 
   weightLogs, recipes, exercises, challenges, userChallenges,
+  bodyMeasurements, dailyHabits,
   type User, type UpsertUser, type Goal, type InsertGoal, 
   type Meal, type InsertMeal, type WaterIntake, type Restaurant, type MenuItem,
   type WeightLog, type InsertWeightLog, type Recipe, type Exercise, type InsertExercise,
-  type Challenge, type UserChallenge
+  type Challenge, type UserChallenge,
+  type BodyMeasurement, type InsertBodyMeasurement, type DailyHabit, type InsertDailyHabit
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
@@ -53,6 +55,15 @@ export interface IStorage {
   getChallenges(): Promise<Challenge[]>;
   getUserChallenges(userId: string, date: Date): Promise<(UserChallenge & { challenge: Challenge })[]>;
   updateUserChallenge(userId: string, challengeId: number, currentValue: number, completed: boolean): Promise<UserChallenge>;
+
+  // Body Measurements
+  getBodyMeasurements(userId: string, limit?: number): Promise<BodyMeasurement[]>;
+  createBodyMeasurement(userId: string, measurement: InsertBodyMeasurement): Promise<BodyMeasurement>;
+  deleteBodyMeasurement(id: number, userId: string): Promise<void>;
+
+  // Daily Habits
+  getDailyHabit(userId: string, date: Date): Promise<DailyHabit | undefined>;
+  updateDailyHabit(userId: string, habit: InsertDailyHabit, date: Date): Promise<DailyHabit>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -368,6 +379,83 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db
         .insert(userChallenges)
         .values({ userId, challengeId, currentValue, completed, date: today })
+        .returning();
+      return created;
+    }
+  }
+
+  // Body Measurements
+  async getBodyMeasurements(userId: string, limit: number = 30): Promise<BodyMeasurement[]> {
+    return db
+      .select()
+      .from(bodyMeasurements)
+      .where(eq(bodyMeasurements.userId, userId))
+      .orderBy(desc(bodyMeasurements.date))
+      .limit(limit);
+  }
+
+  async createBodyMeasurement(userId: string, measurement: InsertBodyMeasurement): Promise<BodyMeasurement> {
+    const [created] = await db
+      .insert(bodyMeasurements)
+      .values({ ...measurement, userId, date: new Date() })
+      .returning();
+    return created;
+  }
+
+  async deleteBodyMeasurement(id: number, userId: string): Promise<void> {
+    await db
+      .delete(bodyMeasurements)
+      .where(and(eq(bodyMeasurements.id, id), eq(bodyMeasurements.userId, userId)));
+  }
+
+  // Daily Habits
+  async getDailyHabit(userId: string, date: Date): Promise<DailyHabit | undefined> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [habit] = await db
+      .select()
+      .from(dailyHabits)
+      .where(
+        and(
+          eq(dailyHabits.userId, userId),
+          gte(dailyHabits.date, startOfDay),
+          lt(dailyHabits.date, endOfDay)
+        )
+      );
+    return habit;
+  }
+
+  async updateDailyHabit(userId: string, habit: InsertDailyHabit, date: Date): Promise<DailyHabit> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [existing] = await db
+      .select()
+      .from(dailyHabits)
+      .where(
+        and(
+          eq(dailyHabits.userId, userId),
+          gte(dailyHabits.date, startOfDay),
+          lt(dailyHabits.date, endOfDay)
+        )
+      );
+
+    if (existing) {
+      const [updated] = await db
+        .update(dailyHabits)
+        .set(habit)
+        .where(eq(dailyHabits.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(dailyHabits)
+        .values({ ...habit, userId, date: startOfDay })
         .returning();
       return created;
     }

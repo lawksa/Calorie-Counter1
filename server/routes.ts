@@ -330,5 +330,57 @@ export async function registerRoutes(
     res.json(result);
   });
 
+  // --- Body Measurements ---
+  app.get(api.bodyMeasurements.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const measurements = await storage.getBodyMeasurements(userId);
+    res.json(measurements);
+  });
+
+  app.post(api.bodyMeasurements.create.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const input = api.bodyMeasurements.create.input.parse(req.body);
+      const measurement = await storage.createBodyMeasurement(userId, input);
+      res.status(201).json(measurement);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.bodyMeasurements.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const id = parseInt(req.params.id);
+    await storage.deleteBodyMeasurement(id, userId);
+    res.status(204).send();
+  });
+
+  // --- Daily Habits ---
+  app.get(api.dailyHabits.get.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const dateQuery = req.query.date as string | undefined;
+    const date = dateQuery ? new Date(dateQuery) : new Date();
+    const habit = await storage.getDailyHabit(userId, date);
+    res.json(habit || null);
+  });
+
+  app.post(api.dailyHabits.update.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { date: dateStr, ...habitData } = api.dailyHabits.update.input.parse(req.body);
+      const date = dateStr ? new Date(dateStr) : new Date();
+      const habit = await storage.updateDailyHabit(userId, habitData, date);
+      res.json(habit);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
   return httpServer;
 }

@@ -11,6 +11,7 @@ import { WaterTracker } from "@/components/dashboard/WaterTracker";
 import { DateSelector } from "@/components/common/DateSelector";
 import { AddMealDialog } from "@/components/meals/AddMealDialog";
 import { DailyChallenges } from "@/components/dashboard/DailyChallenges";
+import { HabitsTracker } from "@/components/dashboard/HabitsTracker";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -303,6 +304,15 @@ export default function Dashboard() {
           transition={{ duration: 0.4, delay: 0.5 }}
         >
           <DailyChallenges />
+        </motion.div>
+
+        {/* Daily Habits Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.6 }}
+        >
+          <HabitsTracker />
         </motion.div>
 
         {/* Empty State */}

@@ -126,6 +126,29 @@ export const userChallenges = pgTable("user_challenges", {
   date: timestamp("date").notNull().defaultNow(),
 });
 
+// Body Measurements (waist, chest, arm, body fat %)
+export const bodyMeasurements = pgTable("body_measurements", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  waist: integer("waist"), // in cm
+  chest: integer("chest"), // in cm
+  arm: integer("arm"), // in cm
+  hips: integer("hips"), // in cm
+  bodyFat: integer("body_fat"), // percentage * 10 for precision (e.g., 155 = 15.5%)
+  date: timestamp("date").notNull().defaultNow(),
+});
+
+// Daily Habits Tracking (fruits, vegetables, sleep, etc.)
+export const dailyHabits = pgTable("daily_habits", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  fruitsServings: integer("fruits_servings").default(0),
+  vegetablesServings: integer("vegetables_servings").default(0),
+  sleepHours: integer("sleep_hours"), // in minutes for precision
+  steps: integer("steps").default(0),
+  date: timestamp("date").notNull().defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertGoalSchema = createInsertSchema(goals).omit({ id: true, userId: true, updatedAt: true });
@@ -138,6 +161,8 @@ export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true })
 export const insertExerciseSchema = createInsertSchema(exercises).omit({ id: true, userId: true, date: true });
 export const insertChallengeSchema = createInsertSchema(challenges).omit({ id: true });
 export const insertUserChallengeSchema = createInsertSchema(userChallenges).omit({ id: true, userId: true, date: true });
+export const insertBodyMeasurementSchema = createInsertSchema(bodyMeasurements).omit({ id: true, userId: true, date: true });
+export const insertDailyHabitSchema = createInsertSchema(dailyHabits).omit({ id: true, userId: true, date: true });
 
 // === TYPES ===
 
@@ -170,6 +195,12 @@ export type InsertChallenge = z.infer<typeof insertChallengeSchema>;
 
 export type UserChallenge = typeof userChallenges.$inferSelect;
 export type InsertUserChallenge = z.infer<typeof insertUserChallengeSchema>;
+
+export type BodyMeasurement = typeof bodyMeasurements.$inferSelect;
+export type InsertBodyMeasurement = z.infer<typeof insertBodyMeasurementSchema>;
+
+export type DailyHabit = typeof dailyHabits.$inferSelect;
+export type InsertDailyHabit = z.infer<typeof insertDailyHabitSchema>;
 
 // Request Types
 export type CreateMealRequest = InsertMeal & { date?: string };

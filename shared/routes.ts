@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { 
   insertMealSchema, insertGoalSchema, insertWaterIntakeSchema, insertWeightLogSchema, insertExerciseSchema,
-  meals, goals, waterIntake, restaurants, menuItems, weightLogs, recipes, exercises, challenges, userChallenges
+  insertBodyMeasurementSchema, insertDailyHabitSchema,
+  meals, goals, waterIntake, restaurants, menuItems, weightLogs, recipes, exercises, challenges, userChallenges,
+  bodyMeasurements, dailyHabits
 } from './schema';
 
 // ============================================
@@ -253,6 +255,54 @@ export const api = {
           water: z.array(z.object({ date: z.string(), value: z.number() })),
           exerciseCalories: z.array(z.object({ date: z.string(), value: z.number() })),
         }),
+      },
+    },
+  },
+  bodyMeasurements: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/body-measurements',
+      responses: {
+        200: z.array(z.custom<typeof bodyMeasurements.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/body-measurements',
+      input: insertBodyMeasurementSchema,
+      responses: {
+        201: z.custom<typeof bodyMeasurements.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/body-measurements/:id',
+      responses: {
+        204: z.void(),
+      },
+    },
+  },
+  dailyHabits: {
+    get: {
+      method: 'GET' as const,
+      path: '/api/daily-habits',
+      input: z.object({
+        date: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.custom<typeof dailyHabits.$inferSelect>().nullable(),
+      },
+    },
+    update: {
+      method: 'POST' as const,
+      path: '/api/daily-habits',
+      input: insertDailyHabitSchema.extend({
+        date: z.string().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof dailyHabits.$inferSelect>(),
+        400: errorSchemas.validation,
       },
     },
   },

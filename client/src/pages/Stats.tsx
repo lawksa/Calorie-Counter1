@@ -38,6 +38,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { BodyMeasurementsCard } from "@/components/stats/BodyMeasurementsCard";
+import { LifeScoreCard } from "@/components/stats/LifeScoreCard";
 
 const dayLabels: Record<string, string> = {
   "0": "الأحد",
@@ -110,6 +112,11 @@ export default function Stats() {
           <h1 className="text-2xl font-bold">الإحصائيات</h1>
           <p className="text-muted-foreground">تتبع تقدمك الأسبوعي</p>
         </div>
+
+        {/* Life Score */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <LifeScoreCard />
+        </motion.div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-3">
@@ -302,6 +309,11 @@ export default function Stats() {
               </div>
             )}
           </Card>
+        </motion.div>
+
+        {/* Body Measurements */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <BodyMeasurementsCard />
         </motion.div>
       </div>
     </AppLayout>
