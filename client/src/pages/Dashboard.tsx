@@ -20,6 +20,7 @@ import { DateSelector } from "@/components/common/DateSelector";
 import { AddMealDialog } from "@/components/meals/AddMealDialog";
 import { DailyChallenges } from "@/components/dashboard/DailyChallenges";
 import { HabitsTracker } from "@/components/dashboard/HabitsTracker";
+import { BarcodeScanner } from "@/components/barcode/BarcodeScanner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -63,6 +64,7 @@ export default function Dashboard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [showResultDialog, setShowResultDialog] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { data: meals, isLoading: mealsLoading } = useMeals(date);
@@ -195,7 +197,11 @@ export default function Dashboard() {
   };
 
   return (
-    <AppLayout onManualAdd={() => setAddMealOpen(true)} onCameraAdd={handleCameraClick}>
+    <AppLayout 
+      onManualAdd={() => setAddMealOpen(true)} 
+      onCameraAdd={handleCameraClick}
+      onBarcodeAdd={() => setShowBarcodeScanner(true)}
+    >
       <div className="flex flex-col gap-6">
         {/* Date Selector */}
         <DateSelector date={date} onDateChange={setDate} />
@@ -498,6 +504,12 @@ export default function Dashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner 
+        open={showBarcodeScanner} 
+        onOpenChange={setShowBarcodeScanner} 
+      />
     </AppLayout>
   );
 }

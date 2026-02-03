@@ -21,9 +21,10 @@ interface AppLayoutProps {
   children: React.ReactNode;
   onManualAdd?: () => void;
   onCameraAdd?: () => void;
+  onBarcodeAdd?: () => void;
 }
 
-export function AppLayout({ children, onManualAdd, onCameraAdd }: AppLayoutProps) {
+export function AppLayout({ children, onManualAdd, onCameraAdd, onBarcodeAdd }: AppLayoutProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
@@ -121,6 +122,7 @@ export function AppLayout({ children, onManualAdd, onCameraAdd }: AppLayoutProps
                               className="w-12 h-12 rounded-full shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center"
                               onClick={() => {
                                 setIsAddMenuOpen(false);
+                                onBarcodeAdd?.();
                               }}
                               data-testid="button-add-barcode"
                             >

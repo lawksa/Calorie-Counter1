@@ -122,6 +122,55 @@ export async function registerRoutes(
     }
   });
 
+  // --- Barcode Lookup ---
+  app.get("/api/barcode/:barcode", requireAuth, async (req, res) => {
+    try {
+      const { barcode } = req.params;
+      
+      // Use Open Food Facts API (free, no API key needed)
+      const response = await fetch(
+        `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
+      );
+      const data = await response.json();
+
+      if (data.status === 1 && data.product) {
+        const product = data.product;
+        const nutriments = product.nutriments || {};
+        
+        // Get product name (prefer Arabic if available)
+        const name = product.product_name_ar || 
+                     product.product_name || 
+                     product.generic_name_ar ||
+                     product.generic_name ||
+                     "منتج غذائي";
+
+        // Get nutritional values per 100g or per serving
+        const servingSize = product.serving_size || "100g";
+        const calories = Math.round(nutriments["energy-kcal_100g"] || nutriments["energy-kcal"] || 0);
+        const protein = Math.round(nutriments.proteins_100g || nutriments.proteins || 0);
+        const carbs = Math.round(nutriments.carbohydrates_100g || nutriments.carbohydrates || 0);
+        const fats = Math.round(nutriments.fat_100g || nutriments.fat || 0);
+
+        res.json({
+          success: true,
+          product: {
+            name,
+            calories,
+            protein,
+            carbs,
+            fats,
+            servingSize: `لكل ${servingSize}`,
+          }
+        });
+      } else {
+        res.json({ success: false, error: "Product not found" });
+      }
+    } catch (error: any) {
+      console.error("Barcode lookup error:", error);
+      res.json({ success: false, error: error.message || "Lookup failed" });
+    }
+  });
+
   // --- Goals ---
   app.get(api.goals.get.path, requireAuth, async (req, res) => {
     const userId = (req.user as any).claims.sub;
