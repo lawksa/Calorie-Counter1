@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Loader2, X, Camera, ScanBarcode } from "lucide-react";
+import { Loader2, ScanBarcode } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -31,21 +31,17 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
+  const [scannerReady, setScannerReady] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const { toast } = useToast();
   const createMeal = useCreateMeal();
 
-  useEffect(() => {
-    if (open && !isScanning && !productInfo) {
-      startScanner();
-    }
+  const startScanner = useCallback(async () => {
+    if (isScanning) return;
     
-    return () => {
-      stopScanner();
-    };
-  }, [open]);
-
-  const startScanner = async () => {
+    const container = document.getElementById("barcode-reader");
+    if (!container) return;
+    
     try {
       setIsScanning(true);
       const scanner = new Html5Qrcode("barcode-reader");
@@ -57,24 +53,46 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
           fps: 10,
           qrbox: { width: 250, height: 150 },
         },
-        onScanSuccess,
+        async (barcode: string) => {
+          await stopScanner();
+          await lookupBarcode(barcode);
+        },
         () => {}
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Scanner error:", error);
-      toast({
-        title: "خطأ",
-        description: "تعذر الوصول للكاميرا",
-        variant: "destructive",
-      });
+      const errorMessage = error?.message || String(error);
+      
+      if (errorMessage.includes("Permission denied") || errorMessage.includes("NotAllowedError")) {
+        toast({
+          title: "صلاحية الكاميرا مطلوبة",
+          description: "يرجى السماح بالوصول للكاميرا من إعدادات المتصفح",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("NotFoundError") || errorMessage.includes("No camera")) {
+        toast({
+          title: "لا توجد كاميرا",
+          description: "لم يتم العثور على كاميرا متصلة بجهازك",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "خطأ في الكاميرا",
+          description: "تعذر تشغيل الكاميرا. جرب مرة أخرى.",
+          variant: "destructive",
+        });
+      }
       setIsScanning(false);
     }
-  };
+  }, [isScanning, toast]);
 
   const stopScanner = async () => {
     if (scannerRef.current) {
       try {
-        await scannerRef.current.stop();
+        const state = scannerRef.current.getState();
+        if (state === 2) { // SCANNING
+          await scannerRef.current.stop();
+        }
         scannerRef.current = null;
       } catch (error) {
         console.error("Stop scanner error:", error);
@@ -83,8 +101,7 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
     setIsScanning(false);
   };
 
-  const onScanSuccess = async (barcode: string) => {
-    await stopScanner();
+  const lookupBarcode = async (barcode: string) => {
     setIsLoading(true);
 
     try {
@@ -112,6 +129,31 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
       setIsLoading(false);
     }
   };
+
+  // Start scanner when dialog opens and container is ready
+  useEffect(() => {
+    if (open && scannerReady && !isScanning && !productInfo && !isLoading) {
+      const timer = setTimeout(() => {
+        startScanner();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [open, scannerReady, isScanning, productInfo, isLoading, startScanner]);
+
+  // Cleanup on close
+  useEffect(() => {
+    if (!open) {
+      stopScanner();
+      setScannerReady(false);
+    }
+  }, [open]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
 
   const handleAddMeal = async () => {
     if (!productInfo) return;
@@ -141,13 +183,21 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
   const handleClose = () => {
     stopScanner();
     setProductInfo(null);
+    setScannerReady(false);
     onOpenChange(false);
   };
 
   const handleRetry = () => {
     setProductInfo(null);
-    startScanner();
+    setScannerReady(true);
   };
+
+  // Callback to know when element is mounted
+  const handleContainerMount = useCallback((node: HTMLDivElement | null) => {
+    if (node && open) {
+      setScannerReady(true);
+    }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -157,6 +207,9 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
             <ScanBarcode className="w-5 h-5" />
             مسح الباركود
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            مسح الباركود للبحث عن معلومات المنتج الغذائية
+          </DialogDescription>
         </DialogHeader>
 
         <div className="px-4 pb-4">
@@ -219,6 +272,7 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
           ) : (
             <div className="space-y-4">
               <div 
+                ref={handleContainerMount}
                 id="barcode-reader" 
                 className="w-full rounded-xl overflow-hidden bg-black"
                 style={{ minHeight: "250px" }}
