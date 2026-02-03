@@ -26,6 +26,11 @@ import { HabitsTracker } from "@/components/dashboard/HabitsTracker";
 import { BarcodeScanner } from "@/components/barcode/BarcodeScanner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
@@ -75,6 +80,7 @@ export default function Dashboard() {
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [isEditingAnalysis, setIsEditingAnalysis] = useState(false);
   const [editedAnalysis, setEditedAnalysis] = useState<any>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { data: meals, isLoading: mealsLoading } = useMeals(date);
@@ -254,64 +260,80 @@ export default function Dashboard() {
         {/* Date Selector */}
         <DateSelector date={date} onDateChange={setDate} />
 
-        {/* Calorie Ring Card */}
+        {/* Calorie Rings Carousel */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="p-6 border-0 shadow-lg bg-gradient-to-br from-card to-muted/30">
-            <div className="flex flex-col items-center">
-              <CalorieRing consumed={totals.calories} target={target.calories} />
-              
-              {/* Quick stats */}
-              <div className="flex items-center gap-6 mt-6 text-sm">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-foreground">{totals.calories}</p>
-                  <p className="text-muted-foreground">مستهلك</p>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{target.calories}</p>
-                  <p className="text-muted-foreground">الهدف</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
+          <Carousel 
+            opts={{ direction: "rtl", loop: true }} 
+            className="w-full"
+            setApi={(api) => {
+              api?.on("select", () => {
+                setCurrentSlide(api.selectedScrollSnap());
+              });
+            }}
+          >
+            <CarouselContent>
+              {/* Slide 1: Main Calorie Ring */}
+              <CarouselItem>
+                <Card className="p-6 border-0 shadow-lg bg-gradient-to-br from-card to-muted/30">
+                  <div className="flex flex-col items-center">
+                    <CalorieRing consumed={totals.calories} target={target.calories} />
+                    
+                    <div className="flex items-center gap-6 mt-6 text-sm">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-foreground">{totals.calories}</p>
+                        <p className="text-muted-foreground">مستهلك</p>
+                      </div>
+                      <div className="h-8 w-px bg-border" />
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-primary">{target.calories}</p>
+                        <p className="text-muted-foreground">الهدف</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </CarouselItem>
 
-        {/* Burned & Net Calories Rings */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.05 }}
-        >
-          <Card className="p-5 border-0 shadow-md">
-            <div className="flex justify-around items-start">
-              <SmallCalorieRing
-                value={burnedCalories}
-                target={target.burnedCaloriesGoal ?? 500}
-                label="السعرات المحروقة"
-                gradientId="burnedGradient"
-                gradientColors={["hsl(25 95% 53%)", "hsl(0 84% 60%)"]}
-                showRemaining={true}
-              />
-              <div className="flex flex-col items-center">
-                <div className="text-center p-4">
-                  <p className={`text-3xl font-bold ${netCalories >= 0 ? 'text-green-600' : 'text-blue-600'}`}>
-                    {netCalories >= 0 ? '+' : ''}{netCalories}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {netCalories >= 0 ? 'فائض سعرات' : 'عجز سعرات'}
-                  </p>
-                </div>
-                <p className="text-xs font-medium text-muted-foreground text-center">صافي السعرات</p>
-              </div>
+              {/* Slide 2: Burned & Net Calories */}
+              <CarouselItem>
+                <Card className="p-5 border-0 shadow-md min-h-[280px]">
+                  <div className="flex justify-around items-start">
+                    <SmallCalorieRing
+                      value={burnedCalories}
+                      target={target.burnedCaloriesGoal ?? 500}
+                      label="السعرات المحروقة"
+                      gradientId="burnedGradient"
+                      gradientColors={["hsl(25 95% 53%)", "hsl(0 84% 60%)"]}
+                      showRemaining={true}
+                    />
+                    <div className="flex flex-col items-center">
+                      <div className="text-center p-4">
+                        <p className={`text-3xl font-bold ${netCalories >= 0 ? 'text-green-600' : 'text-blue-600'}`}>
+                          {netCalories >= 0 ? '+' : ''}{netCalories}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {netCalories >= 0 ? 'فائض سعرات' : 'عجز سعرات'}
+                        </p>
+                      </div>
+                      <p className="text-xs font-medium text-muted-foreground text-center">صافي السعرات</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-center text-xs text-muted-foreground">
+                    <p>المستهلك: {totals.calories} - المحروق: {burnedCalories} = {netCalories >= 0 ? '+' : ''}{netCalories} سعرة</p>
+                  </div>
+                </Card>
+              </CarouselItem>
+            </CarouselContent>
+            
+            {/* Dots indicator */}
+            <div className="flex justify-center gap-2 mt-3">
+              <div className={`w-2 h-2 rounded-full transition-colors ${currentSlide === 0 ? 'bg-primary' : 'bg-muted'}`} />
+              <div className={`w-2 h-2 rounded-full transition-colors ${currentSlide === 1 ? 'bg-primary' : 'bg-muted'}`} />
             </div>
-            <div className="mt-4 text-center text-xs text-muted-foreground">
-              <p>المستهلك: {totals.calories} - المحروق: {burnedCalories} = {netCalories >= 0 ? '+' : ''}{netCalories} سعرة</p>
-            </div>
-          </Card>
+          </Carousel>
         </motion.div>
 
         {/* Macros Section */}
