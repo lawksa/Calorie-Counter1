@@ -6,7 +6,8 @@ import {
   Flame,
   ChartLine,
   Dumbbell,
-  CookingPot
+  CookingPot,
+  UtensilsCrossed
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { label: "الرئيسية", href: "/", icon: LayoutDashboard },
+    { label: "المطاعم", href: "/restaurants", icon: UtensilsCrossed },
     { label: "الوصفات", href: "/recipes", icon: CookingPot },
     { label: "التمارين", href: "/exercises", icon: Dumbbell },
     { label: "الإحصائيات", href: "/stats", icon: ChartLine },

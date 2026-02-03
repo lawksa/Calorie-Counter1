@@ -13,6 +13,7 @@ import Meals from "@/pages/Meals";
 import Stats from "@/pages/Stats";
 import Recipes from "@/pages/Recipes";
 import Exercises from "@/pages/Exercises";
+import Restaurants from "@/pages/Restaurants";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -40,6 +41,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/meals" component={Meals} />
+      <Route path="/restaurants" component={Restaurants} />
       <Route path="/recipes" component={Recipes} />
       <Route path="/stats" component={Stats} />
       <Route path="/exercises" component={Exercises} />
