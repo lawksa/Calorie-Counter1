@@ -63,6 +63,69 @@ export const menuItems = pgTable("menu_items", {
   category: text("category"), // main, sides, drinks, desserts
 });
 
+// Weight and body measurements tracking
+export const weightLogs = pgTable("weight_logs", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  weight: integer("weight").notNull(), // in grams for precision
+  date: timestamp("date").notNull().defaultNow(),
+});
+
+// Healthy Recipes
+export const recipes = pgTable("recipes", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameAr: text("name_ar").notNull(),
+  description: text("description"),
+  descriptionAr: text("description_ar"),
+  ingredients: text("ingredients").array(),
+  ingredientsAr: text("ingredients_ar").array(),
+  instructions: text("instructions"),
+  instructionsAr: text("instructions_ar"),
+  calories: integer("calories").notNull(),
+  protein: integer("protein").notNull(),
+  carbs: integer("carbs").notNull(),
+  fats: integer("fats").notNull(),
+  prepTime: integer("prep_time"), // in minutes
+  category: text("category").notNull(), // breakfast, lunch, dinner, snack, dessert
+  imageUrl: text("image_url"),
+});
+
+// Exercise/Activity tracking
+export const exercises = pgTable("exercises", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  nameAr: text("name_ar"),
+  duration: integer("duration").notNull(), // in minutes
+  caloriesBurned: integer("calories_burned").notNull(),
+  type: text("type").notNull(), // cardio, strength, flexibility, sports
+  date: timestamp("date").notNull().defaultNow(),
+});
+
+// Daily Challenges
+export const challenges = pgTable("challenges", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  titleAr: text("title_ar").notNull(),
+  description: text("description"),
+  descriptionAr: text("description_ar"),
+  type: text("type").notNull(), // steps, water, calories, exercise
+  targetValue: integer("target_value").notNull(),
+  points: integer("points").notNull().default(10),
+  icon: text("icon"),
+});
+
+// User Challenge Progress
+export const userChallenges = pgTable("user_challenges", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  challengeId: integer("challenge_id").notNull().references(() => challenges.id),
+  currentValue: integer("current_value").notNull().default(0),
+  completed: boolean("completed").notNull().default(false),
+  date: timestamp("date").notNull().defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertGoalSchema = createInsertSchema(goals).omit({ id: true, userId: true, updatedAt: true });
@@ -70,6 +133,11 @@ export const insertMealSchema = createInsertSchema(meals).omit({ id: true, userI
 export const insertWaterIntakeSchema = createInsertSchema(waterIntake).omit({ id: true, userId: true, date: true });
 export const insertRestaurantSchema = createInsertSchema(restaurants).omit({ id: true });
 export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: true });
+export const insertWeightLogSchema = createInsertSchema(weightLogs).omit({ id: true, userId: true, date: true });
+export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true });
+export const insertExerciseSchema = createInsertSchema(exercises).omit({ id: true, userId: true, date: true });
+export const insertChallengeSchema = createInsertSchema(challenges).omit({ id: true });
+export const insertUserChallengeSchema = createInsertSchema(userChallenges).omit({ id: true, userId: true, date: true });
 
 // === TYPES ===
 
@@ -87,6 +155,21 @@ export type InsertRestaurant = z.infer<typeof insertRestaurantSchema>;
 
 export type MenuItem = typeof menuItems.$inferSelect;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
+
+export type WeightLog = typeof weightLogs.$inferSelect;
+export type InsertWeightLog = z.infer<typeof insertWeightLogSchema>;
+
+export type Recipe = typeof recipes.$inferSelect;
+export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
+
+export type Exercise = typeof exercises.$inferSelect;
+export type InsertExercise = z.infer<typeof insertExerciseSchema>;
+
+export type Challenge = typeof challenges.$inferSelect;
+export type InsertChallenge = z.infer<typeof insertChallengeSchema>;
+
+export type UserChallenge = typeof userChallenges.$inferSelect;
+export type InsertUserChallenge = z.infer<typeof insertUserChallengeSchema>;
 
 // Request Types
 export type CreateMealRequest = InsertMeal & { date?: string };

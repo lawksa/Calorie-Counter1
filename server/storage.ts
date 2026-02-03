@@ -1,16 +1,19 @@
 import { 
-  users, goals, meals, waterIntake, restaurants, menuItems,
-  type User, type InsertUser, type Goal, type InsertGoal, 
-  type Meal, type InsertMeal, type WaterIntake, type Restaurant, type MenuItem 
+  users, goals, meals, waterIntake, restaurants, menuItems, 
+  weightLogs, recipes, exercises, challenges, userChallenges,
+  type User, type UpsertUser, type Goal, type InsertGoal, 
+  type Meal, type InsertMeal, type WaterIntake, type Restaurant, type MenuItem,
+  type WeightLog, type InsertWeightLog, type Recipe, type Exercise, type InsertExercise,
+  type Challenge, type UserChallenge
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lt, desc } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Auth
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: UpsertUser): Promise<User>;
 
   // Goals
   getGoal(userId: string): Promise<Goal | undefined>;
@@ -18,16 +21,38 @@ export interface IStorage {
 
   // Meals
   getMeals(userId: string, date: Date): Promise<Meal[]>;
+  getMealsDateRange(userId: string, startDate: Date, endDate: Date): Promise<Meal[]>;
   createMeal(userId: string, meal: InsertMeal & { date?: Date }): Promise<Meal>;
   deleteMeal(id: number, userId: string): Promise<void>;
 
   // Water
   getWaterIntake(userId: string, date: Date): Promise<WaterIntake | undefined>;
+  getWaterIntakeDateRange(userId: string, startDate: Date, endDate: Date): Promise<WaterIntake[]>;
   updateWaterIntake(userId: string, glasses: number, date: Date): Promise<WaterIntake>;
 
   // Restaurants
   getRestaurants(): Promise<Restaurant[]>;
   getMenuItems(restaurantId: number): Promise<MenuItem[]>;
+
+  // Weight
+  getWeightLogs(userId: string, limit?: number): Promise<WeightLog[]>;
+  createWeightLog(userId: string, weight: number): Promise<WeightLog>;
+  deleteWeightLog(id: number, userId: string): Promise<void>;
+
+  // Recipes
+  getRecipes(category?: string): Promise<Recipe[]>;
+  getRecipe(id: number): Promise<Recipe | undefined>;
+
+  // Exercises
+  getExercises(userId: string, date: Date): Promise<Exercise[]>;
+  getExercisesDateRange(userId: string, startDate: Date, endDate: Date): Promise<Exercise[]>;
+  createExercise(userId: string, exercise: InsertExercise): Promise<Exercise>;
+  deleteExercise(id: number, userId: string): Promise<void>;
+
+  // Challenges
+  getChallenges(): Promise<Challenge[]>;
+  getUserChallenges(userId: string, date: Date): Promise<(UserChallenge & { challenge: Challenge })[]>;
+  updateUserChallenge(userId: string, challengeId: number, currentValue: number, completed: boolean): Promise<UserChallenge>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -42,7 +67,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: UpsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
@@ -164,6 +189,188 @@ export class DatabaseStorage implements IStorage {
       .from(menuItems)
       .where(eq(menuItems.restaurantId, restaurantId))
       .orderBy(menuItems.category, menuItems.name);
+  }
+
+  // Date range for meals (for statistics)
+  async getMealsDateRange(userId: string, startDate: Date, endDate: Date): Promise<Meal[]> {
+    return db
+      .select()
+      .from(meals)
+      .where(
+        and(
+          eq(meals.userId, userId),
+          gte(meals.date, startDate),
+          lt(meals.date, endDate)
+        )
+      )
+      .orderBy(desc(meals.date));
+  }
+
+  // Water intake date range
+  async getWaterIntakeDateRange(userId: string, startDate: Date, endDate: Date): Promise<WaterIntake[]> {
+    return db
+      .select()
+      .from(waterIntake)
+      .where(
+        and(
+          eq(waterIntake.userId, userId),
+          gte(waterIntake.date, startDate),
+          lt(waterIntake.date, endDate)
+        )
+      )
+      .orderBy(desc(waterIntake.date));
+  }
+
+  // Weight Logs
+  async getWeightLogs(userId: string, limit: number = 30): Promise<WeightLog[]> {
+    return db
+      .select()
+      .from(weightLogs)
+      .where(eq(weightLogs.userId, userId))
+      .orderBy(desc(weightLogs.date))
+      .limit(limit);
+  }
+
+  async createWeightLog(userId: string, weight: number): Promise<WeightLog> {
+    const [log] = await db
+      .insert(weightLogs)
+      .values({ userId, weight, date: new Date() })
+      .returning();
+    return log;
+  }
+
+  async deleteWeightLog(id: number, userId: string): Promise<void> {
+    await db
+      .delete(weightLogs)
+      .where(and(eq(weightLogs.id, id), eq(weightLogs.userId, userId)));
+  }
+
+  // Recipes
+  async getRecipes(category?: string): Promise<Recipe[]> {
+    if (category) {
+      return db
+        .select()
+        .from(recipes)
+        .where(eq(recipes.category, category))
+        .orderBy(recipes.nameAr);
+    }
+    return db.select().from(recipes).orderBy(recipes.nameAr);
+  }
+
+  async getRecipe(id: number): Promise<Recipe | undefined> {
+    const [recipe] = await db.select().from(recipes).where(eq(recipes.id, id));
+    return recipe;
+  }
+
+  // Exercises
+  async getExercises(userId: string, date: Date): Promise<Exercise[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return db
+      .select()
+      .from(exercises)
+      .where(
+        and(
+          eq(exercises.userId, userId),
+          gte(exercises.date, startOfDay),
+          lt(exercises.date, endOfDay)
+        )
+      )
+      .orderBy(desc(exercises.date));
+  }
+
+  async getExercisesDateRange(userId: string, startDate: Date, endDate: Date): Promise<Exercise[]> {
+    return db
+      .select()
+      .from(exercises)
+      .where(
+        and(
+          eq(exercises.userId, userId),
+          gte(exercises.date, startDate),
+          lt(exercises.date, endDate)
+        )
+      )
+      .orderBy(desc(exercises.date));
+  }
+
+  async createExercise(userId: string, exerciseData: InsertExercise): Promise<Exercise> {
+    const [exercise] = await db
+      .insert(exercises)
+      .values({ ...exerciseData, userId, date: new Date() })
+      .returning();
+    return exercise;
+  }
+
+  async deleteExercise(id: number, userId: string): Promise<void> {
+    await db
+      .delete(exercises)
+      .where(and(eq(exercises.id, id), eq(exercises.userId, userId)));
+  }
+
+  // Challenges
+  async getChallenges(): Promise<Challenge[]> {
+    return db.select().from(challenges).orderBy(challenges.points);
+  }
+
+  async getUserChallenges(userId: string, date: Date): Promise<(UserChallenge & { challenge: Challenge })[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const result = await db
+      .select()
+      .from(userChallenges)
+      .innerJoin(challenges, eq(userChallenges.challengeId, challenges.id))
+      .where(
+        and(
+          eq(userChallenges.userId, userId),
+          gte(userChallenges.date, startOfDay),
+          lt(userChallenges.date, endOfDay)
+        )
+      );
+
+    return result.map(r => ({
+      ...r.user_challenges,
+      challenge: r.challenges
+    }));
+  }
+
+  async updateUserChallenge(userId: string, challengeId: number, currentValue: number, completed: boolean): Promise<UserChallenge> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [existing] = await db
+      .select()
+      .from(userChallenges)
+      .where(
+        and(
+          eq(userChallenges.userId, userId),
+          eq(userChallenges.challengeId, challengeId),
+          gte(userChallenges.date, today),
+          lt(userChallenges.date, tomorrow)
+        )
+      );
+
+    if (existing) {
+      const [updated] = await db
+        .update(userChallenges)
+        .set({ currentValue, completed })
+        .where(eq(userChallenges.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userChallenges)
+        .values({ userId, challengeId, currentValue, completed, date: today })
+        .returning();
+      return created;
+    }
   }
 }
 

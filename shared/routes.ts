@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { insertMealSchema, insertGoalSchema, insertWaterIntakeSchema, meals, goals, waterIntake, restaurants, menuItems } from './schema';
+import { 
+  insertMealSchema, insertGoalSchema, insertWaterIntakeSchema, insertWeightLogSchema, insertExerciseSchema,
+  meals, goals, waterIntake, restaurants, menuItems, weightLogs, recipes, exercises, challenges, userChallenges
+} from './schema';
 
 // ============================================
 // SHARED ERROR SCHEMAS
@@ -125,6 +128,131 @@ export const api = {
           fats: z.number(),
         }),
         500: errorSchemas.internal,
+      },
+    },
+  },
+  weight: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/weight',
+      responses: {
+        200: z.array(z.custom<typeof weightLogs.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/weight',
+      input: z.object({
+        weight: z.number().min(20000).max(300000), // grams (20kg - 300kg)
+      }),
+      responses: {
+        201: z.custom<typeof weightLogs.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/weight/:id',
+      responses: {
+        204: z.void(),
+      },
+    },
+  },
+  recipes: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/recipes',
+      input: z.object({
+        category: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof recipes.$inferSelect>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/recipes/:id',
+      responses: {
+        200: z.custom<typeof recipes.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  exercises: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/exercises',
+      input: z.object({
+        date: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof exercises.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/exercises',
+      input: insertExerciseSchema,
+      responses: {
+        201: z.custom<typeof exercises.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/exercises/:id',
+      responses: {
+        204: z.void(),
+      },
+    },
+  },
+  challenges: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/challenges',
+      responses: {
+        200: z.array(z.custom<typeof challenges.$inferSelect>()),
+      },
+    },
+    userProgress: {
+      method: 'GET' as const,
+      path: '/api/challenges/progress',
+      responses: {
+        200: z.array(z.object({
+          id: z.number(),
+          challengeId: z.number(),
+          currentValue: z.number(),
+          completed: z.boolean(),
+          challenge: z.custom<typeof challenges.$inferSelect>(),
+        })),
+      },
+    },
+    update: {
+      method: 'POST' as const,
+      path: '/api/challenges/progress',
+      input: z.object({
+        challengeId: z.number(),
+        currentValue: z.number(),
+        completed: z.boolean(),
+      }),
+      responses: {
+        200: z.custom<typeof userChallenges.$inferSelect>(),
+      },
+    },
+  },
+  stats: {
+    weekly: {
+      method: 'GET' as const,
+      path: '/api/stats/weekly',
+      responses: {
+        200: z.object({
+          calories: z.array(z.object({ date: z.string(), value: z.number() })),
+          protein: z.array(z.object({ date: z.string(), value: z.number() })),
+          carbs: z.array(z.object({ date: z.string(), value: z.number() })),
+          fats: z.array(z.object({ date: z.string(), value: z.number() })),
+          water: z.array(z.object({ date: z.string(), value: z.number() })),
+          exerciseCalories: z.array(z.object({ date: z.string(), value: z.number() })),
+        }),
       },
     },
   },

@@ -6,7 +6,10 @@ import {
   Settings, 
   User,
   Flame,
-  Store
+  Store,
+  ChartLine,
+  Dumbbell,
+  CookingPot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +20,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { label: "الرئيسية", href: "/", icon: LayoutDashboard },
     { label: "المطاعم", href: "/restaurants", icon: Store },
-    { label: "الإعدادات", href: "/settings", icon: Settings },
+    { label: "الوصفات", href: "/recipes", icon: CookingPot },
+    { label: "التمارين", href: "/exercises", icon: Dumbbell },
+    { label: "الإحصائيات", href: "/stats", icon: ChartLine },
   ];
 
   return (
@@ -56,22 +61,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Bottom Navigation - Appetit Style */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t pb-safe">
-        <div className="max-w-lg mx-auto flex items-center justify-around py-2">
+        <div className="max-w-lg mx-auto flex items-center justify-around py-1">
           {navItems.map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.href} href={item.href}>
                 <div className={cn(
-                  "flex flex-col items-center gap-1 px-6 py-2 rounded-2xl transition-all duration-300",
+                  "flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-all duration-300",
                   isActive 
                     ? "bg-primary/10 text-primary" 
                     : "text-muted-foreground"
                 )}>
                   <item.icon className={cn(
-                    "w-6 h-6 transition-transform duration-300",
+                    "w-5 h-5 transition-transform duration-300",
                     isActive && "scale-110"
                   )} />
-                  <span className="text-xs font-medium">{item.label}</span>
+                  <span className="text-[10px] font-medium">{item.label}</span>
                 </div>
               </Link>
             );

@@ -6,6 +6,8 @@ import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import OpenAI from "openai";
 import { seedRestaurants } from "./seed-restaurants";
+import { seedRecipes } from "./seed-recipes";
+import { seedChallenges } from "./seed-challenges";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -21,8 +23,10 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
-  // Seed restaurants on startup
+  // Seed data on startup
   await seedRestaurants();
+  await seedRecipes();
+  await seedChallenges();
 
   const requireAuth = isAuthenticated;
 
@@ -170,6 +174,160 @@ export async function registerRoutes(
       console.error("AI Estimate Error:", err);
       res.status(500).json({ message: "Failed to estimate nutrition" });
     }
+  });
+
+  // --- Weight Logs ---
+  app.get(api.weight.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const logs = await storage.getWeightLogs(userId);
+    res.json(logs);
+  });
+
+  app.post(api.weight.create.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { weight } = api.weight.create.input.parse(req.body);
+      const log = await storage.createWeightLog(userId, weight);
+      res.status(201).json(log);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.weight.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const id = parseInt(req.params.id);
+    await storage.deleteWeightLog(id, userId);
+    res.status(204).send();
+  });
+
+  // --- Recipes ---
+  app.get(api.recipes.list.path, requireAuth, async (req, res) => {
+    const category = req.query.category as string | undefined;
+    const recipesList = await storage.getRecipes(category);
+    res.json(recipesList);
+  });
+
+  app.get(api.recipes.get.path, requireAuth, async (req, res) => {
+    const id = parseInt(req.params.id);
+    const recipe = await storage.getRecipe(id);
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+    res.json(recipe);
+  });
+
+  // --- Exercises ---
+  app.get(api.exercises.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const dateQuery = req.query.date as string | undefined;
+    const date = dateQuery ? new Date(dateQuery) : new Date();
+    const exercisesList = await storage.getExercises(userId, date);
+    res.json(exercisesList);
+  });
+
+  app.post(api.exercises.create.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const input = api.exercises.create.input.parse(req.body);
+      const exercise = await storage.createExercise(userId, input);
+      res.status(201).json(exercise);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.exercises.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const id = parseInt(req.params.id);
+    await storage.deleteExercise(id, userId);
+    res.status(204).send();
+  });
+
+  // --- Challenges ---
+  app.get(api.challenges.list.path, requireAuth, async (req, res) => {
+    const challengesList = await storage.getChallenges();
+    res.json(challengesList);
+  });
+
+  app.get(api.challenges.userProgress.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const progress = await storage.getUserChallenges(userId, new Date());
+    res.json(progress);
+  });
+
+  app.post(api.challenges.update.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { challengeId, currentValue, completed } = api.challenges.update.input.parse(req.body);
+      const progress = await storage.updateUserChallenge(userId, challengeId, currentValue, completed);
+      res.json(progress);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  // --- Weekly Stats ---
+  app.get(api.stats.weekly.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    startDate.setHours(0, 0, 0, 0);
+
+    const [mealsList, waterList, exercisesList] = await Promise.all([
+      storage.getMealsDateRange(userId, startDate, endDate),
+      storage.getWaterIntakeDateRange(userId, startDate, endDate),
+      storage.getExercisesDateRange(userId, startDate, endDate),
+    ]);
+
+    // Group by date
+    const days: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      days.push(d.toISOString().split('T')[0]);
+    }
+
+    const result = {
+      calories: days.map(date => ({
+        date,
+        value: mealsList.filter(m => m.date.toISOString().split('T')[0] === date).reduce((s, m) => s + m.calories, 0)
+      })),
+      protein: days.map(date => ({
+        date,
+        value: mealsList.filter(m => m.date.toISOString().split('T')[0] === date).reduce((s, m) => s + m.protein, 0)
+      })),
+      carbs: days.map(date => ({
+        date,
+        value: mealsList.filter(m => m.date.toISOString().split('T')[0] === date).reduce((s, m) => s + m.carbs, 0)
+      })),
+      fats: days.map(date => ({
+        date,
+        value: mealsList.filter(m => m.date.toISOString().split('T')[0] === date).reduce((s, m) => s + m.fats, 0)
+      })),
+      water: days.map(date => ({
+        date,
+        value: waterList.find(w => w.date.toISOString().split('T')[0] === date)?.glasses || 0
+      })),
+      exerciseCalories: days.map(date => ({
+        date,
+        value: exercisesList.filter(e => e.date.toISOString().split('T')[0] === date).reduce((s, e) => s + e.caloriesBurned, 0)
+      })),
+    };
+
+    res.json(result);
   });
 
   return httpServer;

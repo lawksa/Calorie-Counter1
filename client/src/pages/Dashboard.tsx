@@ -10,6 +10,7 @@ import { MacroCard } from "@/components/dashboard/MacroCard";
 import { WaterTracker } from "@/components/dashboard/WaterTracker";
 import { DateSelector } from "@/components/common/DateSelector";
 import { AddMealDialog } from "@/components/meals/AddMealDialog";
+import { DailyChallenges } from "@/components/dashboard/DailyChallenges";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -294,6 +295,15 @@ export default function Dashboard() {
             );
           })}
         </div>
+
+        {/* Daily Challenges Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.5 }}
+        >
+          <DailyChallenges />
+        </motion.div>
 
         {/* Empty State */}
         {(!meals || meals.length === 0) && (
