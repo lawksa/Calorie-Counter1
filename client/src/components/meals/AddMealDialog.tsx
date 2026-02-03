@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { Loader2, Sparkles, Plus, UtensilsCrossed, Beef, Wheat, Droplets, Flame, Sunrise, Sun, Moon, Cookie } from "lucide-react";
+import { Loader2, Sparkles, Plus, UtensilsCrossed, Beef, Wheat, Droplets, Flame, Sunrise, Sun, Moon, Cookie, History, Trash2, BookmarkPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMeal, useEstimateCalories } from "@/hooks/use-meals";
-import { insertMealSchema } from "@shared/schema";
+import { insertMealSchema, type SavedFood } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Meal types with icons and colors
 const mealTypes = [
@@ -53,6 +55,30 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
 
   const [selectedMealType, setSelectedMealType] = useState("lunch");
 
+  // Saved foods queries
+  const { data: savedFoods = [] } = useQuery<SavedFood[]>({
+    queryKey: ['/api/saved-foods']
+  });
+
+  const saveFoodMutation = useMutation({
+    mutationFn: async (food: { name: string; calories: number; protein: number; carbs: number; fats: number }) => {
+      return apiRequest('POST', '/api/saved-foods', { ...food, source: 'manual' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-foods'] });
+    }
+  });
+
+  const deleteSavedFoodMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest('DELETE', `/api/saved-foods/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-foods'] });
+      toast({ title: "تم حذف الوجبة المحفوظة" });
+    }
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -81,7 +107,7 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
     }
   };
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: FormValues, saveFood: boolean = true) => {
     try {
       const mealDate = new Date(date);
       const now = new Date();
@@ -93,6 +119,17 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
         date: mealDate.toISOString(),
       });
       
+      // Save the food for future use if not already saved
+      if (saveFood && data.name && !savedFoods.some(f => f.name === data.name)) {
+        saveFoodMutation.mutate({
+          name: data.name,
+          calories: data.calories,
+          protein: data.protein,
+          carbs: data.carbs,
+          fats: data.fats
+        });
+      }
+      
       const mealTypeLabel = mealTypes.find(t => t.value === selectedMealType)?.label || "";
       toast({
         title: "تمت الإضافة",
@@ -103,6 +140,37 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
       setQuery("");
       setEstimatedData(null);
       setSelectedMealType("lunch");
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل في إضافة الوجبة. حاول مرة أخرى.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addFromSavedFood = async (food: SavedFood) => {
+    try {
+      const mealDate = new Date(date);
+      const now = new Date();
+      mealDate.setHours(now.getHours(), now.getMinutes());
+
+      await createMeal.mutateAsync({
+        name: food.name,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fats: food.fats,
+        mealType: selectedMealType,
+        date: mealDate.toISOString(),
+      });
+      
+      const mealTypeLabel = mealTypes.find(t => t.value === selectedMealType)?.label || "";
+      toast({
+        title: "تمت الإضافة",
+        description: `تم تسجيل ${food.name} في ${mealTypeLabel} بنجاح.`,
+      });
+      setOpen(false);
     } catch (error) {
       toast({
         title: "خطأ",
@@ -158,15 +226,92 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
           </div>
         </div>
 
-        <Tabs defaultValue="ai" className="flex-1 flex flex-col overflow-hidden">
+        <Tabs defaultValue={savedFoods.length > 0 ? "saved" : "ai"} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="mx-6 mb-4 p-1 bg-muted rounded-xl">
+            <TabsTrigger value="saved" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <History className="w-4 h-4" /> السابقة
+              {savedFoods.length > 0 && (
+                <span className="text-xs bg-primary/20 text-primary px-1.5 rounded-full">{savedFoods.length}</span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="ai" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Sparkles className="w-4 h-4" /> تحليل ذكي
+              <Sparkles className="w-4 h-4" /> ذكي
             </TabsTrigger>
             <TabsTrigger value="manual" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <UtensilsCrossed className="w-4 h-4" /> إدخال يدوي
+              <UtensilsCrossed className="w-4 h-4" /> يدوي
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="saved" className="flex-1 overflow-y-auto px-6 pb-6">
+            {savedFoods.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <History className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">لا توجد وجبات محفوظة</h3>
+                <p className="text-sm text-muted-foreground max-w-[250px]">
+                  عند إضافة وجبة جديدة، سيتم حفظها تلقائياً هنا لإضافتها بسرعة في المستقبل
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {savedFoods.map((food) => (
+                  <motion.div
+                    key={food.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-card border rounded-xl p-3 hover-elevate"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold truncate">{food.name}</h4>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1">
+                            <Flame className="w-3 h-3 text-primary" />
+                            {food.calories}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Beef className="w-3 h-3" style={{ color: "hsl(142 71% 45%)" }} />
+                            {food.protein}غ
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Wheat className="w-3 h-3" style={{ color: "hsl(25 95% 53%)" }} />
+                            {food.carbs}غ
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Droplets className="w-3 h-3" style={{ color: "hsl(271 81% 56%)" }} />
+                            {food.fats}غ
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => deleteSavedFoodMutation.mutate(food.id)}
+                          disabled={deleteSavedFoodMutation.isPending}
+                          data-testid={`button-delete-saved-${food.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-8 px-3 gap-1 bg-gradient-to-r from-primary to-emerald-500"
+                          onClick={() => addFromSavedFood(food)}
+                          disabled={createMeal.isPending}
+                          data-testid={`button-add-saved-${food.id}`}
+                        >
+                          <Plus className="w-4 h-4" />
+                          إضافة
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="ai" className="flex-1 flex flex-col gap-4 overflow-y-auto px-6 pb-6">
             <div className="space-y-4">
@@ -239,7 +384,7 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
                     
                     <Button 
                       className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-emerald-500 rounded-2xl shadow-lg"
-                      onClick={() => onSubmit(estimatedData)}
+                      onClick={() => onSubmit(estimatedData!, true)}
                       disabled={createMeal.isPending}
                     >
                       {createMeal.isPending && <Loader2 className="w-5 h-5 ml-2 animate-spin" />}
@@ -252,7 +397,7 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
           </TabsContent>
 
           <TabsContent value="manual" className="flex-1 overflow-y-auto px-6 pb-6">
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={form.handleSubmit((data) => onSubmit(data, true))} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="name" className="font-medium">اسم الوجبة</Label>
                 <div className="flex gap-2">
