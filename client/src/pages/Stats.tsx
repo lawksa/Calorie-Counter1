@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/dialog";
 import { BodyMeasurementsCard } from "@/components/stats/BodyMeasurementsCard";
 import { LifeScoreCard } from "@/components/stats/LifeScoreCard";
+import { ProgressCard } from "@/components/stats/ProgressCard";
+import { useGoals } from "@/hooks/use-goals";
 
 const dayLabels: Record<string, string> = {
   "0": "الأحد",
@@ -54,6 +56,7 @@ const dayLabels: Record<string, string> = {
 export default function Stats() {
   const { data: stats, isLoading: statsLoading } = useWeeklyStats();
   const { data: weightLogs, isLoading: weightLoading } = useWeightLogs();
+  const { data: goals } = useGoals();
   const createWeight = useCreateWeightLog();
   const [newWeight, setNewWeight] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -116,6 +119,11 @@ export default function Stats() {
         {/* Life Score */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <LifeScoreCard />
+        </motion.div>
+
+        {/* Weekly Progress */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <ProgressCard weeklyStats={stats || null} goals={goals || null} />
         </motion.div>
 
         {/* Quick Stats */}
