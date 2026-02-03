@@ -149,6 +149,20 @@ export const dailyHabits = pgTable("daily_habits", {
   date: timestamp("date").notNull().defaultNow(),
 });
 
+// Saved Foods (user favorites/bookmarks)
+export const savedFoods = pgTable("saved_foods", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  calories: integer("calories").notNull(),
+  protein: integer("protein").notNull(),
+  carbs: integer("carbs").notNull(),
+  fats: integer("fats").notNull(),
+  barcode: text("barcode"), // optional - if scanned from barcode
+  source: text("source"), // 'barcode', 'camera', 'manual'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertGoalSchema = createInsertSchema(goals).omit({ id: true, userId: true, updatedAt: true });
@@ -163,6 +177,7 @@ export const insertChallengeSchema = createInsertSchema(challenges).omit({ id: t
 export const insertUserChallengeSchema = createInsertSchema(userChallenges).omit({ id: true, userId: true, date: true });
 export const insertBodyMeasurementSchema = createInsertSchema(bodyMeasurements).omit({ id: true, userId: true, date: true });
 export const insertDailyHabitSchema = createInsertSchema(dailyHabits).omit({ id: true, userId: true, date: true });
+export const insertSavedFoodSchema = createInsertSchema(savedFoods).omit({ id: true, userId: true, createdAt: true });
 
 // === TYPES ===
 
@@ -201,6 +216,9 @@ export type InsertBodyMeasurement = z.infer<typeof insertBodyMeasurementSchema>;
 
 export type DailyHabit = typeof dailyHabits.$inferSelect;
 export type InsertDailyHabit = z.infer<typeof insertDailyHabitSchema>;
+
+export type SavedFood = typeof savedFoods.$inferSelect;
+export type InsertSavedFood = z.infer<typeof insertSavedFoodSchema>;
 
 // Request Types
 export type CreateMealRequest = InsertMeal & { date?: string };

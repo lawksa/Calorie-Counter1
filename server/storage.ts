@@ -1,12 +1,13 @@
 import { 
   users, goals, meals, waterIntake, restaurants, menuItems, 
   weightLogs, recipes, exercises, challenges, userChallenges,
-  bodyMeasurements, dailyHabits,
+  bodyMeasurements, dailyHabits, savedFoods,
   type User, type UpsertUser, type Goal, type InsertGoal, 
   type Meal, type InsertMeal, type WaterIntake, type Restaurant, type MenuItem,
   type WeightLog, type InsertWeightLog, type Recipe, type Exercise, type InsertExercise,
   type Challenge, type UserChallenge,
-  type BodyMeasurement, type InsertBodyMeasurement, type DailyHabit, type InsertDailyHabit
+  type BodyMeasurement, type InsertBodyMeasurement, type DailyHabit, type InsertDailyHabit,
+  type SavedFood, type InsertSavedFood
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
@@ -64,6 +65,11 @@ export interface IStorage {
   // Daily Habits
   getDailyHabit(userId: string, date: Date): Promise<DailyHabit | undefined>;
   updateDailyHabit(userId: string, habit: InsertDailyHabit, date: Date): Promise<DailyHabit>;
+
+  // Saved Foods
+  getSavedFoods(userId: string): Promise<SavedFood[]>;
+  createSavedFood(userId: string, food: InsertSavedFood): Promise<SavedFood>;
+  deleteSavedFood(id: number, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -459,6 +465,20 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // Saved Foods
+  async getSavedFoods(userId: string): Promise<SavedFood[]> {
+    return db.select().from(savedFoods).where(eq(savedFoods.userId, userId)).orderBy(desc(savedFoods.createdAt));
+  }
+
+  async createSavedFood(userId: string, food: InsertSavedFood): Promise<SavedFood> {
+    const [created] = await db.insert(savedFoods).values({ ...food, userId }).returning();
+    return created;
+  }
+
+  async deleteSavedFood(id: number, userId: string): Promise<void> {
+    await db.delete(savedFoods).where(and(eq(savedFoods.id, id), eq(savedFoods.userId, userId)));
   }
 }
 
