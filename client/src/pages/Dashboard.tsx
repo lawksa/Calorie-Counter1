@@ -290,21 +290,23 @@ export default function Dashboard() {
             <div className="flex justify-around items-start">
               <SmallCalorieRing
                 value={burnedCalories}
-                target={target.burnedCaloriesGoal || 500}
+                target={target.burnedCaloriesGoal ?? 500}
                 label="السعرات المحروقة"
                 gradientId="burnedGradient"
                 gradientColors={["hsl(25 95% 53%)", "hsl(0 84% 60%)"]}
                 showRemaining={true}
               />
-              <SmallCalorieRing
-                value={Math.abs(netCalories)}
-                target={target.calories}
-                label={netCalories >= 0 ? "صافي السعرات" : "عجز السعرات"}
-                subLabel={netCalories >= 0 ? "فائض" : "عجز"}
-                gradientId="netGradient"
-                gradientColors={netCalories >= 0 ? ["hsl(158 64% 52%)", "hsl(142 71% 45%)"] : ["hsl(200 80% 50%)", "hsl(220 80% 60%)"]}
-                showRemaining={false}
-              />
+              <div className="flex flex-col items-center">
+                <div className="text-center p-4">
+                  <p className={`text-3xl font-bold ${netCalories >= 0 ? 'text-green-600' : 'text-blue-600'}`}>
+                    {netCalories >= 0 ? '+' : ''}{netCalories}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {netCalories >= 0 ? 'فائض سعرات' : 'عجز سعرات'}
+                  </p>
+                </div>
+                <p className="text-xs font-medium text-muted-foreground text-center">صافي السعرات</p>
+              </div>
             </div>
             <div className="mt-4 text-center text-xs text-muted-foreground">
               <p>المستهلك: {totals.calories} - المحروق: {burnedCalories} = {netCalories >= 0 ? '+' : ''}{netCalories} سعرة</p>
