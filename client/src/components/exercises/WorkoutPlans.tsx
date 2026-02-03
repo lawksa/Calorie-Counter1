@@ -6,8 +6,7 @@ import {
   Dumbbell, 
   Clock, 
   Flame, 
-  ChevronRight, 
-  ChevronLeft,
+  ChevronRight,
   Play,
   Target,
   Zap,
@@ -15,7 +14,10 @@ import {
   TrendingUp,
   Home,
   Check,
-  Info
+  Info,
+  Trophy,
+  Weight,
+  LucideIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { workoutPlans, WorkoutPlan, WorkoutDay } from "@/data/workoutPlans";
@@ -32,12 +34,21 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-const goalIcons: Record<string, any> = {
+const goalIcons: Record<string, LucideIcon> = {
   cut: Flame,
   bulk: TrendingUp,
   maintain: Scale,
   strength: Dumbbell,
   endurance: Zap,
+};
+
+const planIcons: Record<string, LucideIcon> = {
+  Flame: Flame,
+  Dumbbell: Dumbbell,
+  Trophy: Trophy,
+  Scale: Scale,
+  Weight: Weight,
+  Home: Home,
 };
 
 const goalColors: Record<string, string> = {
@@ -92,7 +103,7 @@ export function WorkoutPlans({ onStartWorkout }: WorkoutPlansProps) {
                 className={`flex flex-col items-center p-3 rounded-xl transition-all ${
                   isSelected 
                     ? `bg-gradient-to-br ${goal.color} text-white shadow-lg` 
-                    : "bg-muted/50 hover:bg-muted"
+                    : "bg-muted/50 hover-elevate"
                 }`}
                 data-testid={`button-goal-${goal.id}`}
               >
@@ -109,7 +120,7 @@ export function WorkoutPlans({ onStartWorkout }: WorkoutPlansProps) {
         <h3 className="font-bold text-lg flex items-center gap-2">
           <Target className="w-5 h-5 text-primary" />
           خطط التمارين
-          <Badge variant="secondary" className="mr-auto">{filteredPlans.length} خطة</Badge>
+          <Badge variant="secondary" className="ms-auto">{filteredPlans.length} خطة</Badge>
         </h3>
 
         <div className="space-y-3">
@@ -129,7 +140,10 @@ export function WorkoutPlans({ onStartWorkout }: WorkoutPlansProps) {
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center shadow-md`}>
-                      <span className="text-2xl">{plan.icon}</span>
+                      {(() => {
+                        const PlanIcon = planIcons[plan.icon] || Dumbbell;
+                        return <PlanIcon className="w-7 h-7 text-white" />;
+                      })()}
                     </div>
                     <div className="flex-1">
                       <h4 className="font-bold">{plan.nameAr}</h4>
@@ -144,7 +158,7 @@ export function WorkoutPlans({ onStartWorkout }: WorkoutPlansProps) {
                         </span>
                       </div>
                     </div>
-                    <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+                    <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
                   </div>
                 </Card>
               </motion.div>
@@ -160,7 +174,10 @@ export function WorkoutPlans({ onStartWorkout }: WorkoutPlansProps) {
             <>
               <DialogHeader>
                 <div className={`w-full h-24 rounded-xl bg-gradient-to-br ${selectedPlan.color} flex items-center justify-center mb-4`}>
-                  <span className="text-5xl">{selectedPlan.icon}</span>
+                  {(() => {
+                    const PlanIcon = planIcons[selectedPlan.icon] || Dumbbell;
+                    return <PlanIcon className="w-12 h-12 text-white" />;
+                  })()}
                 </div>
                 <DialogTitle className="text-xl">{selectedPlan.nameAr}</DialogTitle>
                 <p className="text-muted-foreground text-sm">{selectedPlan.descriptionAr}</p>
@@ -182,7 +199,7 @@ export function WorkoutPlans({ onStartWorkout }: WorkoutPlansProps) {
                 {selectedPlan.days.map((day, index) => (
                   <Card 
                     key={index}
-                    className="p-4 border-0 bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                    className="p-4 border-0 bg-muted/50 hover-elevate cursor-pointer"
                     onClick={() => handleDayClick(day)}
                     data-testid={`card-day-${day.dayNumber}`}
                   >
@@ -288,7 +305,8 @@ export function WorkoutPlans({ onStartWorkout }: WorkoutPlansProps) {
               </div>
 
               <Button 
-                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-emerald-500 rounded-2xl shadow-lg"
+                size="lg"
+                className="w-full text-lg font-bold bg-gradient-to-r from-primary to-emerald-500 rounded-xl shadow-lg"
                 onClick={() => {
                   if (onStartWorkout) {
                     onStartWorkout(selectedDay.exercises);
@@ -297,7 +315,7 @@ export function WorkoutPlans({ onStartWorkout }: WorkoutPlansProps) {
                 }}
                 data-testid="button-start-workout"
               >
-                <Play className="w-5 h-5 ml-2" />
+                <Play className="w-5 h-5 me-2" />
                 ابدأ التمرين
               </Button>
             </div>

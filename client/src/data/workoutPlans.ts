@@ -39,13 +39,13 @@ export interface WorkoutPlan {
 }
 
 export const muscleGroups = [
-  { id: "chest", name: "صدر", icon: "💪", color: "text-red-500" },
-  { id: "back", name: "ظهر", icon: "🔙", color: "text-blue-500" },
-  { id: "shoulders", name: "أكتاف", icon: "🏋️", color: "text-orange-500" },
-  { id: "arms", name: "ذراعين", icon: "💪", color: "text-purple-500" },
-  { id: "legs", name: "أرجل", icon: "🦵", color: "text-green-500" },
-  { id: "core", name: "بطن", icon: "🎯", color: "text-amber-500" },
-  { id: "cardio", name: "كارديو", icon: "❤️", color: "text-pink-500" },
+  { id: "chest", name: "صدر", icon: "Dumbbell", color: "text-red-500" },
+  { id: "back", name: "ظهر", icon: "ArrowUpDown", color: "text-blue-500" },
+  { id: "shoulders", name: "أكتاف", icon: "Target", color: "text-orange-500" },
+  { id: "arms", name: "ذراعين", icon: "Dumbbell", color: "text-purple-500" },
+  { id: "legs", name: "أرجل", icon: "Footprints", color: "text-green-500" },
+  { id: "core", name: "بطن", icon: "Circle", color: "text-amber-500" },
+  { id: "cardio", name: "كارديو", icon: "Heart", color: "text-pink-500" },
 ];
 
 export const workoutPlans: WorkoutPlan[] = [
@@ -62,7 +62,7 @@ export const workoutPlans: WorkoutPlan[] = [
     description: "Perfect for beginners starting their fat loss journey",
     descriptionAr: "مثالي للمبتدئين لبدء رحلة حرق الدهون",
     color: "from-orange-500 to-red-500",
-    icon: "🔥",
+    icon: "Flame",
     days: [
       {
         dayNumber: 1,
@@ -128,7 +128,7 @@ export const workoutPlans: WorkoutPlan[] = [
     description: "5-day split for serious fat burning",
     descriptionAr: "برنامج 5 أيام لحرق الدهون بشكل جدي",
     color: "from-red-500 to-rose-600",
-    icon: "🔥",
+    icon: "Flame",
     days: [
       {
         dayNumber: 1,
@@ -230,7 +230,7 @@ export const workoutPlans: WorkoutPlan[] = [
     description: "Build muscle with this 4-day program",
     descriptionAr: "ابني عضلاتك مع هذا البرنامج",
     color: "from-green-500 to-emerald-600",
-    icon: "💪",
+    icon: "Dumbbell",
     days: [
       {
         dayNumber: 1,
@@ -314,7 +314,7 @@ export const workoutPlans: WorkoutPlan[] = [
     description: "Push/Pull/Legs twice a week for maximum gains",
     descriptionAr: "دفع/سحب/رجل مرتين أسبوعياً لأقصى نمو",
     color: "from-emerald-500 to-green-600",
-    icon: "🏆",
+    icon: "Trophy",
     days: [
       {
         dayNumber: 1,
@@ -434,7 +434,7 @@ export const workoutPlans: WorkoutPlan[] = [
     description: "Maintain your physique with 3 days a week",
     descriptionAr: "حافظ على جسمك بـ 3 أيام أسبوعياً",
     color: "from-blue-500 to-indigo-600",
-    icon: "⚖️",
+    icon: "Scale",
     days: [
       {
         dayNumber: 1,
@@ -502,7 +502,7 @@ export const workoutPlans: WorkoutPlan[] = [
     description: "Classic 5x5 program for building raw strength",
     descriptionAr: "برنامج كلاسيكي لبناء القوة الخام",
     color: "from-purple-500 to-violet-600",
-    icon: "🏋️",
+    icon: "Weight",
     days: [
       {
         dayNumber: 1,
@@ -562,7 +562,7 @@ export const workoutPlans: WorkoutPlan[] = [
     description: "No equipment needed - train at home",
     descriptionAr: "بدون معدات - تمرن في البيت",
     color: "from-pink-500 to-rose-600",
-    icon: "🏠",
+    icon: "Home",
     days: [
       {
         dayNumber: 1,
