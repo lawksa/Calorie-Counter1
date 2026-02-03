@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { 
@@ -7,18 +8,25 @@ import {
   ChartLine,
   Dumbbell,
   UtensilsCrossed,
-  Plus
+  Plus,
+  X,
+  Camera,
+  ScanBarcode,
+  PenLine
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  onAddClick?: () => void;
+  onManualAdd?: () => void;
+  onCameraAdd?: () => void;
 }
 
-export function AppLayout({ children, onAddClick }: AppLayoutProps) {
+export function AppLayout({ children, onManualAdd, onCameraAdd }: AppLayoutProps) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   const navItems = [
     { label: "الرئيسية", href: "/", icon: LayoutDashboard },
@@ -68,16 +76,98 @@ export function AppLayout({ children, onAddClick }: AppLayoutProps) {
           {navItems.map((item) => {
             if (item.isAddButton) {
               return (
-                <button
-                  key="add-button"
-                  onClick={onAddClick}
-                  className="flex flex-col items-center gap-0.5 px-2 py-2"
-                  data-testid="button-nav-add"
-                >
-                  <div className="w-12 h-12 -mt-6 rounded-full bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center shadow-lg">
-                    <Plus className="w-6 h-6 text-white" />
-                  </div>
-                </button>
+                <div key="add-button" className="relative">
+                  <AnimatePresence>
+                    {isAddMenuOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-40"
+                          onClick={() => setIsAddMenuOpen(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 20 }}
+                          className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col gap-3 items-center z-50"
+                        >
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1, transition: { delay: 0.1 } }}
+                            className="flex items-center gap-3"
+                          >
+                            <span className="bg-background/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium shadow-lg whitespace-nowrap">
+                              تحليل صورة
+                            </span>
+                            <button
+                              className="w-12 h-12 rounded-full shadow-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center"
+                              onClick={() => {
+                                setIsAddMenuOpen(false);
+                                onCameraAdd?.();
+                              }}
+                              data-testid="button-add-camera"
+                            >
+                              <Camera className="w-5 h-5 text-white" />
+                            </button>
+                          </motion.div>
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1, transition: { delay: 0.05 } }}
+                            className="flex items-center gap-3"
+                          >
+                            <span className="bg-background/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium shadow-lg whitespace-nowrap">
+                              مسح الباركود
+                            </span>
+                            <button
+                              className="w-12 h-12 rounded-full shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center"
+                              onClick={() => {
+                                setIsAddMenuOpen(false);
+                              }}
+                              data-testid="button-add-barcode"
+                            >
+                              <ScanBarcode className="w-5 h-5 text-white" />
+                            </button>
+                          </motion.div>
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex items-center gap-3"
+                          >
+                            <span className="bg-background/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium shadow-lg whitespace-nowrap">
+                              إضافة يدوية
+                            </span>
+                            <button
+                              className="w-12 h-12 rounded-full shadow-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center"
+                              onClick={() => {
+                                setIsAddMenuOpen(false);
+                                onManualAdd?.();
+                              }}
+                              data-testid="button-add-manual"
+                            >
+                              <PenLine className="w-5 h-5 text-white" />
+                            </button>
+                          </motion.div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                  <button
+                    onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
+                    className="flex flex-col items-center gap-0.5 px-2 py-2"
+                    data-testid="button-nav-add"
+                  >
+                    <div className={cn(
+                      "w-12 h-12 -mt-6 rounded-full flex items-center justify-center shadow-lg transition-all duration-300",
+                      isAddMenuOpen 
+                        ? "bg-muted rotate-45" 
+                        : "bg-gradient-to-br from-primary to-emerald-500"
+                    )}>
+                      <Plus className={cn(
+                        "w-6 h-6 transition-colors",
+                        isAddMenuOpen ? "text-foreground" : "text-white"
+                      )} />
+                    </div>
+                  </button>
+                </div>
               );
             }
             

@@ -1,7 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { useMeals, useDeleteMeal } from "@/hooks/use-meals";
+import { useMeals, useDeleteMeal, useCreateMeal } from "@/hooks/use-meals";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useGoals } from "@/hooks/use-goals";
 import { useWaterIntake, useUpdateWaterIntake } from "@/hooks/use-water";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -52,11 +60,90 @@ export default function Dashboard() {
   const [date, setDate] = useState<Date>(new Date());
   const [expandedCategory, setExpandedCategory] = useState<MealCategory | null>(null);
   const [addMealOpen, setAddMealOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   const { data: meals, isLoading: mealsLoading } = useMeals(date);
   const { data: goals, isLoading: goalsLoading } = useGoals();
   const { data: waterData, isLoading: waterLoading } = useWaterIntake(date);
   const updateWater = useUpdateWaterIntake();
   const deleteMeal = useDeleteMeal();
+  const createMeal = useCreateMeal();
+
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsAnalyzing(true);
+    
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const response = await apiRequest("POST", "/api/analyze-meal-image", { 
+        image: base64 
+      });
+      const result = await response.json();
+      
+      if (result.success && result.meal) {
+        setAnalysisResult(result.meal);
+        setShowResultDialog(true);
+      } else {
+        toast({
+          title: "تعذر التحليل",
+          description: result.error || "لم نتمكن من تحليل الصورة، حاول مجدداً",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تحليل الصورة",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleAddAnalyzedMeal = async () => {
+    if (!analysisResult) return;
+
+    try {
+      await createMeal.mutateAsync({
+        name: analysisResult.name,
+        calories: analysisResult.calories,
+        protein: analysisResult.protein,
+        carbs: analysisResult.carbs,
+        fats: analysisResult.fats,
+      });
+      toast({
+        title: "تمت الإضافة",
+        description: `تم إضافة ${analysisResult.name} إلى وجباتك`,
+      });
+      setShowResultDialog(false);
+      setAnalysisResult(null);
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل في إضافة الوجبة",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (mealsLoading || goalsLoading || waterLoading) {
     return (
@@ -108,7 +195,7 @@ export default function Dashboard() {
   };
 
   return (
-    <AppLayout onAddClick={() => setAddMealOpen(true)}>
+    <AppLayout onManualAdd={() => setAddMealOpen(true)} onCameraAdd={handleCameraClick}>
       <div className="flex flex-col gap-6">
         {/* Date Selector */}
         <DateSelector date={date} onDateChange={setDate} />
@@ -341,6 +428,76 @@ export default function Dashboard() {
         externalOpen={addMealOpen} 
         onExternalOpenChange={setAddMealOpen} 
       />
+
+      {/* Camera Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleImageSelect}
+        data-testid="input-camera-capture"
+      />
+
+      {/* Analysis Result Dialog */}
+      <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+        <DialogContent className="sm:max-w-[400px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>نتيجة التحليل</DialogTitle>
+          </DialogHeader>
+          
+          {analysisResult && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-xl font-bold">{analysisResult.name}</h3>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-primary/10 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{analysisResult.calories}</p>
+                  <p className="text-xs text-muted-foreground">سعرة حرارية</p>
+                </div>
+                <div className="bg-green-100 dark:bg-green-900/30 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-green-600">{analysisResult.protein}g</p>
+                  <p className="text-xs text-muted-foreground">بروتين</p>
+                </div>
+                <div className="bg-orange-100 dark:bg-orange-900/30 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-orange-600">{analysisResult.carbs}g</p>
+                  <p className="text-xs text-muted-foreground">كربوهيدرات</p>
+                </div>
+                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-purple-600">{analysisResult.fats}g</p>
+                  <p className="text-xs text-muted-foreground">دهون</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setShowResultDialog(false)}
+                  data-testid="button-cancel-analysis"
+                >
+                  إلغاء
+                </Button>
+                <Button 
+                  className="flex-1 bg-gradient-to-r from-primary to-emerald-500"
+                  onClick={handleAddAnalyzedMeal}
+                  disabled={createMeal.isPending}
+                  data-testid="button-confirm-analysis"
+                >
+                  {createMeal.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "إضافة الوجبة"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
