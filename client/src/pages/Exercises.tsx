@@ -339,10 +339,27 @@ export default function Exercises() {
         </div>
 
         {exercises?.length === 0 && (
-          <div className="text-center py-12">
-            <Dumbbell className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">لم تسجل تمارين اليوم</p>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="py-8"
+          >
+            <button
+              onClick={() => setDialogOpen(true)}
+              className="w-full p-6 rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-4 group"
+              data-testid="add-exercise-empty"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+                <Plus className="w-8 h-8 text-primary" />
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-lg mb-1">أضف تمرينك الأول</p>
+                <p className="text-muted-foreground text-sm">
+                  الحركة بركة! ابدأ يومك بنشاط بدني
+                </p>
+              </div>
+            </button>
+          </motion.div>
         )}
       </div>
     </AppLayout>

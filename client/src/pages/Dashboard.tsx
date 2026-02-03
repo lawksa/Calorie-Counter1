@@ -444,7 +444,7 @@ export default function Dashboard() {
 
                   {/* Expanded Meals */}
                   <AnimatePresence>
-                    {isExpanded && categoryMeals.length > 0 && (
+                    {isExpanded && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
@@ -453,38 +453,61 @@ export default function Dashboard() {
                         className="border-t"
                       >
                         <div className="p-3 space-y-2">
-                          {categoryMeals.map((meal) => (
-                            <div 
-                              key={meal.id}
-                              className="flex items-center justify-between p-3 bg-muted/30 rounded-xl group"
-                            >
-                              <div>
-                                <p className="font-medium">{meal.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(meal.date), "h:mm a", { locale: ar })}
-                                </p>
-                              </div>
-                              
-                              <div className="flex items-center gap-3">
-                                <div className="text-left">
-                                  <p className="font-bold text-primary">{meal.calories} سعرة</p>
+                          {categoryMeals.length > 0 ? (
+                            categoryMeals.map((meal) => (
+                              <div 
+                                key={meal.id}
+                                className="flex items-center justify-between p-3 bg-muted/30 rounded-xl group"
+                              >
+                                <div>
+                                  <p className="font-medium">{meal.name}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    ب{meal.protein} • ك{meal.carbs} • د{meal.fats}
+                                    {format(new Date(meal.date), "h:mm a", { locale: ar })}
                                   </p>
                                 </div>
                                 
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => deleteMeal.mutate(meal.id)}
-                                  data-testid={`delete-meal-${meal.id}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-left">
+                                    <p className="font-bold text-primary">{meal.calories} سعرة</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      ب{meal.protein} • ك{meal.carbs} • د{meal.fats}
+                                    </p>
+                                  </div>
+                                  
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => deleteMeal.mutate(meal.id)}
+                                    data-testid={`delete-meal-${meal.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))
+                          ) : (
+                            <button
+                              onClick={() => setAddMealOpen(true)}
+                              className="w-full p-4 rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-3 group"
+                              data-testid={`add-meal-${category.key}-empty`}
+                            >
+                              <div className="w-10 h-10 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+                                <Plus className="w-5 h-5 text-primary" />
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                                  أضف {category.labelAr}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {category.key === 'breakfast' && "ابدأ يومك بوجبة صحية ومغذية"}
+                                  {category.key === 'lunch' && "حان وقت شحن طاقتك"}
+                                  {category.key === 'dinner' && "اختر عشاء خفيف ومتوازن"}
+                                  {category.key === 'snack' && "وجبة خفيفة صحية تفرق معك"}
+                                </p>
+                              </div>
+                            </button>
+                          )}
                         </div>
                       </motion.div>
                     )}
