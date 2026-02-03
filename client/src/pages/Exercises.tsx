@@ -217,6 +217,8 @@ export default function Exercises() {
   const [isTimerMode, setIsTimerMode] = useState(false);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerStopped, setIsTimerStopped] = useState(false);
+  const [timerCaloriesInput, setTimerCaloriesInput] = useState("");
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Timer effect
@@ -278,20 +280,28 @@ export default function Exercises() {
     setTimerSeconds(0);
   };
 
-  // Stop timer and save exercise
-  const handleStopTimer = async () => {
+  // Stop timer - show calorie input
+  const handleStopTimer = () => {
     setIsTimerRunning(false);
+    setIsTimerStopped(true);
+  };
+
+  // Save exercise after user enters calories
+  const handleSaveTimerExercise = async () => {
+    if (!timerCaloriesInput || parseInt(timerCaloriesInput) <= 0) {
+      toast({ title: "خطأ", description: "أدخل السعرات المحروقة", variant: "destructive" });
+      return;
+    }
     
     if (selectedPreset && timerSeconds > 0) {
       const finalMinutes = Math.max(1, Math.ceil(timerSeconds / 60));
-      const finalCalories = Math.floor((timerSeconds / 60) * selectedPreset.caloriesPerMin);
       
       await createExercise.mutateAsync({
         name: selectedPreset.name,
         nameAr: selectedPreset.nameAr,
         type: selectedPreset.type,
         duration: finalMinutes,
-        caloriesBurned: Math.max(1, finalCalories),
+        caloriesBurned: parseInt(timerCaloriesInput),
       });
       
       resetDialog();
@@ -313,6 +323,8 @@ export default function Exercises() {
     setIsTimerMode(false);
     setIsTimerRunning(false);
     setTimerSeconds(0);
+    setIsTimerStopped(false);
+    setTimerCaloriesInput("");
   };
 
   const handleAddExercise = async () => {
@@ -498,7 +510,7 @@ export default function Exercises() {
                                       ? "ring-2 ring-primary ring-offset-2 scale-[1.02]" 
                                       : "hover:scale-[1.02]"
                                   }`}
-                                  data-testid={`button-exercise-${preset.name}`}
+                                  data-testid={`exercise-card-${homeExercises.indexOf(preset) !== -1 ? homeExercises.indexOf(preset) : gymExercises.indexOf(preset)}`}
                                 >
                                   <div className="aspect-[4/3] relative">
                                     <img 
@@ -559,7 +571,7 @@ export default function Exercises() {
                           )}
 
                           {/* Active Timer Display */}
-                          {isTimerMode && (
+                          {isTimerMode && !isTimerStopped && (
                             <motion.div
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
@@ -570,20 +582,14 @@ export default function Exercises() {
                                   {selectedPreset?.nameAr}
                                 </p>
                                 <div className="flex items-center justify-center gap-2 text-4xl font-mono font-bold">
-                                  <Timer className="w-8 h-8 text-primary animate-pulse" />
+                                  <Timer className={`w-8 h-8 text-primary ${isTimerRunning ? "animate-pulse" : ""}`} />
                                   <span>{formatTime(timerSeconds)}</span>
                                 </div>
                               </div>
                               
-                              <div className="grid grid-cols-2 gap-3 text-center">
-                                <div className="bg-background/50 rounded-lg p-2">
-                                  <p className="text-xs text-muted-foreground">المدة</p>
-                                  <p className="font-bold text-lg">{timerMinutes} دقيقة</p>
-                                </div>
-                                <div className="bg-background/50 rounded-lg p-2">
-                                  <p className="text-xs text-muted-foreground">السعرات</p>
-                                  <p className="font-bold text-lg text-orange-500">{timerCalories}</p>
-                                </div>
+                              <div className="bg-background/50 rounded-lg p-3 text-center">
+                                <p className="text-xs text-muted-foreground">المدة</p>
+                                <p className="font-bold text-lg">{timerMinutes} دقيقة</p>
                               </div>
 
                               {isTimerRunning ? (
@@ -595,7 +601,7 @@ export default function Exercises() {
                                   data-testid="button-stop-timer"
                                 >
                                   <StopCircle className="w-5 h-5" />
-                                  إيقاف وحفظ التمرين
+                                  إيقاف التمرين
                                 </Button>
                               ) : (
                                 <div className="flex gap-2">
@@ -613,12 +619,54 @@ export default function Exercises() {
                                     variant="outline"
                                     className="flex-1 h-12 gap-2"
                                     onClick={handleStopTimer}
-                                    data-testid="button-save-timer"
+                                    data-testid="button-finish-timer"
                                   >
-                                    حفظ
+                                    انتهيت
                                   </Button>
                                 </div>
                               )}
+                            </motion.div>
+                          )}
+
+                          {/* Calorie Input After Timer Stops */}
+                          {isTimerMode && isTimerStopped && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="bg-gradient-to-br from-orange-500/10 to-red-500/10 p-4 rounded-xl space-y-4"
+                            >
+                              <div className="text-center">
+                                <p className="text-sm text-muted-foreground mb-1">
+                                  {selectedPreset?.nameAr}
+                                </p>
+                                <p className="text-2xl font-bold">{timerMinutes} دقيقة</p>
+                              </div>
+                              
+                              <div>
+                                <Label className="flex items-center gap-2 text-sm font-medium mb-2">
+                                  <Flame className="w-4 h-4 text-orange-500" />
+                                  أدخل السعرات المحروقة
+                                </Label>
+                                <Input
+                                  type="number"
+                                  placeholder="مثال: 150"
+                                  value={timerCaloriesInput}
+                                  onChange={(e) => setTimerCaloriesInput(e.target.value)}
+                                  className="h-12 text-center text-lg"
+                                  data-testid="input-timer-calories"
+                                  autoFocus
+                                />
+                              </div>
+
+                              <Button
+                                type="button"
+                                className="w-full h-12 gap-2"
+                                onClick={handleSaveTimerExercise}
+                                disabled={createExercise.isPending}
+                                data-testid="button-save-timer-exercise"
+                              >
+                                {createExercise.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التمرين"}
+                              </Button>
                             </motion.div>
                           )}
 
