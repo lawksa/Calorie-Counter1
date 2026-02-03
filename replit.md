@@ -55,6 +55,7 @@ The application is designed for Arabic (RTL) layout with `dir="rtl"` on root ele
 3. **Statistics Dashboard** - Weekly charts for calories, macros, water, weight trends
 4. **Exercise Tracking** - 10 preset exercises with calorie burn calculation
 5. **Daily Challenges** - 8 challenges with completion tracking and points system
+6. **Exercise Timer** - Real-time timer that counts exercise duration and calculates calories burned live; user can start/stop timer and exercise is automatically saved with calculated values
 
 ### Navigation
 Bottom navigation with 5 tabs: Home, Restaurants, Recipes, Exercises, Stats

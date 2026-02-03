@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -47,7 +47,11 @@ import {
   ImagePlus,
   X,
   CalendarDays,
-  ListChecks
+  ListChecks,
+  Play,
+  Pause,
+  Timer,
+  StopCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -208,6 +212,41 @@ export default function Exercises() {
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [isCustom, setIsCustom] = useState(false);
   const [exerciseLocation, setExerciseLocation] = useState<ExerciseLocation>(null);
+  
+  // Timer state
+  const [isTimerMode, setIsTimerMode] = useState(false);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Timer effect
+  useEffect(() => {
+    if (isTimerRunning) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    }
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [isTimerRunning]);
+
+  // Format timer display
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Calculate real-time calories
+  const timerCalories = selectedPreset ? Math.floor((timerSeconds / 60) * selectedPreset.caloriesPerMin) : 0;
+  const timerMinutes = Math.ceil(timerSeconds / 60);
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -227,6 +266,54 @@ export default function Exercises() {
 
   const totalCaloriesBurned = exercises?.reduce((sum, e) => sum + e.caloriesBurned, 0) || 0;
   const totalDuration = exercises?.reduce((sum, e) => sum + e.duration, 0) || 0;
+
+  // Start timer
+  const handleStartTimer = () => {
+    if (!selectedPreset) {
+      toast({ title: "خطأ", description: "اختر تمرين أولاً", variant: "destructive" });
+      return;
+    }
+    setIsTimerMode(true);
+    setIsTimerRunning(true);
+    setTimerSeconds(0);
+  };
+
+  // Stop timer and save exercise
+  const handleStopTimer = async () => {
+    setIsTimerRunning(false);
+    
+    if (selectedPreset && timerSeconds > 0) {
+      const finalMinutes = Math.max(1, Math.ceil(timerSeconds / 60));
+      const finalCalories = Math.floor((timerSeconds / 60) * selectedPreset.caloriesPerMin);
+      
+      await createExercise.mutateAsync({
+        name: selectedPreset.name,
+        nameAr: selectedPreset.nameAr,
+        type: selectedPreset.type,
+        duration: finalMinutes,
+        caloriesBurned: Math.max(1, finalCalories),
+      });
+      
+      resetDialog();
+      toast({ title: "تم", description: `تم إضافة التمرين - ${finalMinutes} دقيقة` });
+    }
+  };
+
+  // Reset all dialog state
+  const resetDialog = () => {
+    setDialogOpen(false);
+    setSelectedPreset(null);
+    setDuration("");
+    setWeight("");
+    setCustomName("");
+    setCustomCalories("");
+    setCustomWeight("");
+    setCustomImage(null);
+    setExerciseLocation(null);
+    setIsTimerMode(false);
+    setIsTimerRunning(false);
+    setTimerSeconds(0);
+  };
 
   const handleAddExercise = async () => {
     if (isCustom) {
@@ -255,15 +342,7 @@ export default function Exercises() {
       return;
     }
 
-    setDialogOpen(false);
-    setSelectedPreset(null);
-    setDuration("");
-    setWeight("");
-    setCustomName("");
-    setCustomCalories("");
-    setCustomWeight("");
-    setCustomImage(null);
-    setExerciseLocation(null);
+    resetDialog();
     toast({ title: "تم", description: "تم إضافة التمرين" });
   };
 
@@ -463,30 +542,117 @@ export default function Exercises() {
                             </div>
                           )}
 
-                          <div>
-                            <Label className="flex items-center gap-2 text-sm font-medium mb-2">
-                              <Clock className="w-4 h-4 text-orange-500" />
-                              المدة (دقائق)
-                            </Label>
-                            <Input
-                              type="number"
-                              placeholder="30"
-                              value={duration}
-                              onChange={(e) => setDuration(e.target.value)}
-                              className="h-11 text-center"
-                              data-testid="input-exercise-duration"
-                            />
-                            {selectedPreset && duration && (
-                              <p className="text-sm text-muted-foreground mt-2 text-center">
-                                السعرات المحروقة: <span className="font-bold text-primary">
-                                  {selectedPreset.caloriesPerMin * parseInt(duration || "0")}
-                                </span>
-                                {weight && (
-                                  <span className="text-muted-foreground"> | الوزن: {weight} كجم</span>
-                                )}
-                              </p>
-                            )}
-                          </div>
+                          {/* Timer Mode Toggle */}
+                          {selectedPreset && !isTimerMode && (
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="flex-1 h-12 gap-2"
+                                onClick={handleStartTimer}
+                                data-testid="button-start-timer"
+                              >
+                                <Play className="w-5 h-5 text-green-500" />
+                                ابدأ التمرين
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Active Timer Display */}
+                          {isTimerMode && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="bg-gradient-to-br from-primary/10 to-emerald-500/10 p-4 rounded-xl space-y-4"
+                            >
+                              <div className="text-center">
+                                <p className="text-sm text-muted-foreground mb-1">
+                                  {selectedPreset?.nameAr}
+                                </p>
+                                <div className="flex items-center justify-center gap-2 text-4xl font-mono font-bold">
+                                  <Timer className="w-8 h-8 text-primary animate-pulse" />
+                                  <span>{formatTime(timerSeconds)}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-3 text-center">
+                                <div className="bg-background/50 rounded-lg p-2">
+                                  <p className="text-xs text-muted-foreground">المدة</p>
+                                  <p className="font-bold text-lg">{timerMinutes} دقيقة</p>
+                                </div>
+                                <div className="bg-background/50 rounded-lg p-2">
+                                  <p className="text-xs text-muted-foreground">السعرات</p>
+                                  <p className="font-bold text-lg text-orange-500">{timerCalories}</p>
+                                </div>
+                              </div>
+
+                              {isTimerRunning ? (
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  className="w-full h-12 gap-2"
+                                  onClick={handleStopTimer}
+                                  data-testid="button-stop-timer"
+                                >
+                                  <StopCircle className="w-5 h-5" />
+                                  إيقاف وحفظ التمرين
+                                </Button>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    className="flex-1 h-12 gap-2"
+                                    onClick={() => setIsTimerRunning(true)}
+                                    data-testid="button-resume-timer"
+                                  >
+                                    <Play className="w-5 h-5" />
+                                    استمرار
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="flex-1 h-12 gap-2"
+                                    onClick={handleStopTimer}
+                                    data-testid="button-save-timer"
+                                  >
+                                    حفظ
+                                  </Button>
+                                </div>
+                              )}
+                            </motion.div>
+                          )}
+
+                          {/* Manual Duration Input - Only show when timer is not active */}
+                          {!isTimerMode && (
+                            <div className="pt-2 border-t">
+                              <p className="text-xs text-muted-foreground text-center mb-2">أو أدخل المدة يدوياً</p>
+                              <div>
+                                <Label className="flex items-center gap-2 text-sm font-medium mb-2">
+                                  <Clock className="w-4 h-4 text-orange-500" />
+                                  المدة (دقائق)
+                                </Label>
+                                <Input
+                                  type="number"
+                                  placeholder="30"
+                                  value={duration}
+                                  onChange={(e) => setDuration(e.target.value)}
+                                  className="h-11 text-center"
+                                  data-testid="input-exercise-duration"
+                                />
+                              </div>
+                            </div>
+                          )}
+                          
+                          {selectedPreset && duration && !isTimerMode && (
+                            <p className="text-sm text-muted-foreground text-center">
+                              السعرات المحروقة: <span className="font-bold text-primary">
+                                {selectedPreset.caloriesPerMin * parseInt(duration || "0")}
+                              </span>
+                              {weight && (
+                                <span className="text-muted-foreground"> | الوزن: {weight} كجم</span>
+                              )}
+                            </p>
+                          )}
                         </>
                       ) : (
                         <>
