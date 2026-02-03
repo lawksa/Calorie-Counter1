@@ -21,7 +21,26 @@ import {
   Footprints,
   Home,
   Building2,
-  ArrowRight
+  ArrowRight,
+  Weight,
+  Heart,
+  Zap,
+  Move,
+  StretchHorizontal,
+  CircleDot,
+  Target,
+  Grip,
+  Square,
+  ArrowUpDown,
+  RotateCcw,
+  Waves,
+  Mountain,
+  Cable,
+  Box,
+  Armchair,
+  Shield,
+  CircleUser,
+  Hand
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -49,44 +68,89 @@ const exerciseTypes = [
 
 // Home exercises - no equipment needed
 const homeExercises = [
-  { name: "المشي", nameAr: "المشي", type: "cardio", caloriesPerMin: 5 },
-  { name: "الجري في المكان", nameAr: "الجري في المكان", type: "cardio", caloriesPerMin: 10 },
-  { name: "نط الحبل", nameAr: "نط الحبل", type: "cardio", caloriesPerMin: 12 },
-  { name: "تمارين الضغط", nameAr: "تمارين الضغط", type: "strength", caloriesPerMin: 8 },
-  { name: "تمارين البطن", nameAr: "تمارين البطن", type: "strength", caloriesPerMin: 6 },
-  { name: "السكوات", nameAr: "السكوات", type: "strength", caloriesPerMin: 7 },
-  { name: "تمارين البلانك", nameAr: "تمارين البلانك", type: "strength", caloriesPerMin: 5 },
-  { name: "اليوغا", nameAr: "اليوغا", type: "flexibility", caloriesPerMin: 4 },
-  { name: "تمدد", nameAr: "تمدد", type: "flexibility", caloriesPerMin: 3 },
-  { name: "تمارين HIIT", nameAr: "تمارين HIIT", type: "cardio", caloriesPerMin: 14 },
+  { name: "المشي", nameAr: "المشي", type: "cardio", caloriesPerMin: 5, icon: Footprints, color: "text-green-500", needsWeight: false },
+  { name: "الجري في المكان", nameAr: "الجري في المكان", type: "cardio", caloriesPerMin: 10, icon: Zap, color: "text-orange-500", needsWeight: false },
+  { name: "نط الحبل", nameAr: "نط الحبل", type: "cardio", caloriesPerMin: 12, icon: RotateCcw, color: "text-pink-500", needsWeight: false },
+  { name: "تمارين الضغط", nameAr: "تمارين الضغط", type: "strength", caloriesPerMin: 8, icon: ArrowUpDown, color: "text-blue-500", needsWeight: false },
+  { name: "تمارين البطن", nameAr: "تمارين البطن", type: "strength", caloriesPerMin: 6, icon: CircleDot, color: "text-amber-500", needsWeight: false },
+  { name: "السكوات", nameAr: "السكوات", type: "strength", caloriesPerMin: 7, icon: PersonStanding, color: "text-indigo-500", needsWeight: false },
+  { name: "تمارين البلانك", nameAr: "تمارين البلانك", type: "strength", caloriesPerMin: 5, icon: StretchHorizontal, color: "text-cyan-500", needsWeight: false },
+  { name: "اليوغا", nameAr: "اليوغا", type: "flexibility", caloriesPerMin: 4, icon: Heart, color: "text-purple-500", needsWeight: false },
+  { name: "تمدد", nameAr: "تمدد", type: "flexibility", caloriesPerMin: 3, icon: Move, color: "text-teal-500", needsWeight: false },
+  { name: "تمارين HIIT", nameAr: "تمارين HIIT", type: "cardio", caloriesPerMin: 14, icon: Flame, color: "text-red-500", needsWeight: false },
+  { name: "بيربي", nameAr: "بيربي (Burpees)", type: "cardio", caloriesPerMin: 12, icon: Zap, color: "text-rose-500", needsWeight: false },
+  { name: "لانجز", nameAr: "لانجز (Lunges)", type: "strength", caloriesPerMin: 6, icon: Footprints, color: "text-violet-500", needsWeight: false },
 ];
 
 // Gym exercises - equipment found in Saudi gyms (Fitness Time, Leejam, Gold's Gym, etc.)
 const gymExercises = [
-  { name: "جهاز المشي", nameAr: "جهاز المشي (Treadmill)", type: "cardio", caloriesPerMin: 10 },
-  { name: "الدراجة الثابتة", nameAr: "الدراجة الثابتة (Stationary Bike)", type: "cardio", caloriesPerMin: 8 },
-  { name: "جهاز الإليبتيكال", nameAr: "جهاز الإليبتيكال (Elliptical)", type: "cardio", caloriesPerMin: 9 },
-  { name: "جهاز التجديف", nameAr: "جهاز التجديف (Rowing Machine)", type: "cardio", caloriesPerMin: 11 },
-  { name: "جهاز الدرج", nameAr: "جهاز الدرج (Stair Climber)", type: "cardio", caloriesPerMin: 12 },
-  { name: "بنش الصدر", nameAr: "بنش الصدر (Chest Press)", type: "strength", caloriesPerMin: 6 },
-  { name: "جهاز الظهر", nameAr: "جهاز الظهر (Lat Pulldown)", type: "strength", caloriesPerMin: 6 },
-  { name: "جهاز الأرجل", nameAr: "جهاز الأرجل (Leg Press)", type: "strength", caloriesPerMin: 7 },
-  { name: "جهاز الكتف", nameAr: "جهاز الكتف (Shoulder Press)", type: "strength", caloriesPerMin: 6 },
-  { name: "جهاز الباي", nameAr: "جهاز الباي (Bicep Curl Machine)", type: "strength", caloriesPerMin: 5 },
-  { name: "جهاز التراي", nameAr: "جهاز التراي (Tricep Machine)", type: "strength", caloriesPerMin: 5 },
-  { name: "جهاز البطن", nameAr: "جهاز البطن (Ab Machine)", type: "strength", caloriesPerMin: 5 },
-  { name: "الأوزان الحرة", nameAr: "الأوزان الحرة (Free Weights)", type: "strength", caloriesPerMin: 7 },
-  { name: "جهاز الكيبل", nameAr: "جهاز الكيبل (Cable Machine)", type: "strength", caloriesPerMin: 6 },
-  { name: "جهاز سميث", nameAr: "جهاز سميث (Smith Machine)", type: "strength", caloriesPerMin: 7 },
+  // Cardio Equipment
+  { name: "جهاز المشي", nameAr: "جهاز المشي", type: "cardio", caloriesPerMin: 10, icon: Activity, color: "text-green-500", needsWeight: false },
+  { name: "الدراجة الثابتة", nameAr: "الدراجة الثابتة", type: "cardio", caloriesPerMin: 8, icon: Bike, color: "text-blue-500", needsWeight: false },
+  { name: "جهاز الإليبتيكال", nameAr: "الإليبتيكال", type: "cardio", caloriesPerMin: 9, icon: Waves, color: "text-cyan-500", needsWeight: false },
+  { name: "جهاز التجديف", nameAr: "جهاز التجديف", type: "cardio", caloriesPerMin: 11, icon: Waves, color: "text-teal-500", needsWeight: false },
+  { name: "جهاز الدرج", nameAr: "جهاز الدرج", type: "cardio", caloriesPerMin: 12, icon: Mountain, color: "text-orange-500", needsWeight: false },
+  
+  // Chest
+  { name: "بنش مسطح", nameAr: "بنش مسطح", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-500", needsWeight: true },
+  { name: "بنش مائل علوي", nameAr: "بنش مائل علوي", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-400", needsWeight: true },
+  { name: "بنش مائل سفلي", nameAr: "بنش مائل سفلي", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-600", needsWeight: true },
+  { name: "جهاز الصدر", nameAr: "جهاز الصدر (Chest Press)", type: "strength", caloriesPerMin: 6, icon: Target, color: "text-rose-500", needsWeight: true },
+  { name: "تفتيح صدر", nameAr: "تفتيح صدر (Pec Deck)", type: "strength", caloriesPerMin: 5, icon: Move, color: "text-pink-500", needsWeight: true },
+  
+  // Back
+  { name: "سحب أمامي", nameAr: "سحب أمامي (Lat Pulldown)", type: "strength", caloriesPerMin: 6, icon: ArrowUpDown, color: "text-blue-500", needsWeight: true },
+  { name: "سحب أرضي", nameAr: "سحب أرضي (Seated Row)", type: "strength", caloriesPerMin: 6, icon: Grip, color: "text-blue-600", needsWeight: true },
+  { name: "تي بار", nameAr: "تي بار (T-Bar Row)", type: "strength", caloriesPerMin: 7, icon: Dumbbell, color: "text-indigo-500", needsWeight: true },
+  
+  // Shoulders
+  { name: "كتف أمامي", nameAr: "كتف أمامي (Front Raise)", type: "strength", caloriesPerMin: 5, icon: CircleUser, color: "text-amber-500", needsWeight: true },
+  { name: "كتف جانبي", nameAr: "كتف جانبي (Lateral Raise)", type: "strength", caloriesPerMin: 5, icon: Move, color: "text-yellow-500", needsWeight: true },
+  { name: "شولدر برس", nameAr: "شولدر برس (Shoulder Press)", type: "strength", caloriesPerMin: 6, icon: ArrowUpDown, color: "text-orange-500", needsWeight: true },
+  
+  // Arms
+  { name: "باي بار", nameAr: "باي بار (Barbell Curl)", type: "strength", caloriesPerMin: 5, icon: Dumbbell, color: "text-purple-500", needsWeight: true },
+  { name: "باي دمبل", nameAr: "باي دمبل (Dumbbell Curl)", type: "strength", caloriesPerMin: 5, icon: Weight, color: "text-violet-500", needsWeight: true },
+  { name: "تراي كيبل", nameAr: "تراي كيبل (Tricep Pushdown)", type: "strength", caloriesPerMin: 5, icon: Cable, color: "text-fuchsia-500", needsWeight: true },
+  { name: "تراي سكل كراشر", nameAr: "سكل كراشر (Skull Crusher)", type: "strength", caloriesPerMin: 5, icon: Dumbbell, color: "text-pink-600", needsWeight: true },
+  
+  // Legs
+  { name: "ليج برس", nameAr: "ليج برس (Leg Press)", type: "strength", caloriesPerMin: 8, icon: Box, color: "text-emerald-500", needsWeight: true },
+  { name: "سكوات راك", nameAr: "سكوات راك (Squat Rack)", type: "strength", caloriesPerMin: 9, icon: PersonStanding, color: "text-green-600", needsWeight: true },
+  { name: "ليج اكستنشن", nameAr: "ليج اكستنشن (Leg Extension)", type: "strength", caloriesPerMin: 6, icon: Footprints, color: "text-lime-500", needsWeight: true },
+  { name: "ليج كيرل", nameAr: "ليج كيرل (Leg Curl)", type: "strength", caloriesPerMin: 6, icon: RotateCcw, color: "text-teal-500", needsWeight: true },
+  { name: "كاف ريز", nameAr: "كاف ريز (Calf Raise)", type: "strength", caloriesPerMin: 5, icon: ArrowUpDown, color: "text-cyan-600", needsWeight: true },
+  { name: "هاك سكوات", nameAr: "هاك سكوات (Hack Squat)", type: "strength", caloriesPerMin: 8, icon: Shield, color: "text-green-500", needsWeight: true },
+  
+  // Core
+  { name: "جهاز البطن", nameAr: "جهاز البطن (Ab Machine)", type: "strength", caloriesPerMin: 5, icon: CircleDot, color: "text-amber-500", needsWeight: true },
+  { name: "كيبل كرنش", nameAr: "كيبل كرنش (Cable Crunch)", type: "strength", caloriesPerMin: 5, icon: Cable, color: "text-orange-400", needsWeight: true },
+  
+  // Multi-purpose
+  { name: "جهاز الكيبل", nameAr: "جهاز الكيبل (Cable Machine)", type: "strength", caloriesPerMin: 6, icon: Cable, color: "text-slate-500", needsWeight: true },
+  { name: "جهاز سميث", nameAr: "جهاز سميث (Smith Machine)", type: "strength", caloriesPerMin: 7, icon: Grip, color: "text-gray-600", needsWeight: true },
+  { name: "الأوزان الحرة", nameAr: "الأوزان الحرة (Free Weights)", type: "strength", caloriesPerMin: 7, icon: Dumbbell, color: "text-zinc-500", needsWeight: true },
+  { name: "الكيتل بيل", nameAr: "كيتل بيل (Kettlebell)", type: "strength", caloriesPerMin: 8, icon: Weight, color: "text-stone-500", needsWeight: true },
 ];
 
 type ExerciseLocation = "home" | "gym" | null;
 
+type ExercisePreset = {
+  name: string;
+  nameAr: string;
+  type: string;
+  caloriesPerMin: number;
+  icon: any;
+  color: string;
+  needsWeight: boolean;
+};
+
 export default function Exercises() {
   const [date, setDate] = useState<Date>(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<typeof homeExercises[0] | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<ExercisePreset | null>(null);
   const [duration, setDuration] = useState("");
+  const [weight, setWeight] = useState("");
   const [customName, setCustomName] = useState("");
   const [customType, setCustomType] = useState<string>("cardio");
   const [customCalories, setCustomCalories] = useState("");
@@ -131,6 +195,7 @@ export default function Exercises() {
     setDialogOpen(false);
     setSelectedPreset(null);
     setDuration("");
+    setWeight("");
     setCustomName("");
     setCustomCalories("");
     setExerciseLocation(null);
@@ -257,33 +322,56 @@ export default function Exercises() {
 
                       {!isCustom ? (
                         <>
-                          <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto">
+                          <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto">
                             {(exerciseLocation === "home" ? homeExercises : gymExercises).map((preset) => {
-                              const typeInfo = exerciseTypes.find(t => t.value === preset.type);
-                              const Icon = typeInfo?.icon || Activity;
+                              const Icon = preset.icon;
                               return (
                                 <Button
                                   key={preset.name}
                                   variant={selectedPreset?.name === preset.name ? "default" : "outline"}
-                                  className="h-auto py-3 flex-col gap-1 text-wrap"
-                                  onClick={() => setSelectedPreset(preset)}
+                                  className="h-auto py-2.5 flex-col gap-1 text-wrap"
+                                  onClick={() => {
+                                    setSelectedPreset(preset);
+                                    if (!preset.needsWeight) setWeight("");
+                                  }}
                                   data-testid={`button-exercise-${preset.name}`}
                                 >
-                                  <Icon className={`w-5 h-5 ${typeInfo?.color}`} />
-                                  <span className="text-xs leading-tight">{preset.nameAr}</span>
+                                  <Icon className={`w-5 h-5 ${preset.color}`} />
+                                  <span className="text-[10px] leading-tight">{preset.nameAr}</span>
                                 </Button>
                               );
                             })}
                           </div>
                           
+                          {/* Weight field - only for strength exercises that need it */}
+                          {selectedPreset?.needsWeight && (
+                            <div className="bg-muted/50 p-3 rounded-xl">
+                              <Label className="flex items-center gap-2 text-sm font-medium mb-2">
+                                <Weight className="w-4 h-4 text-blue-500" />
+                                الوزن (كجم)
+                              </Label>
+                              <Input
+                                type="number"
+                                placeholder="مثال: 20"
+                                value={weight}
+                                onChange={(e) => setWeight(e.target.value)}
+                                className="h-11 text-center"
+                                data-testid="input-exercise-weight"
+                              />
+                            </div>
+                          )}
+
                           <div>
-                            <Label>المدة (دقائق)</Label>
+                            <Label className="flex items-center gap-2 text-sm font-medium mb-2">
+                              <Clock className="w-4 h-4 text-orange-500" />
+                              المدة (دقائق)
+                            </Label>
                             <Input
                               type="number"
                               placeholder="30"
                               value={duration}
                               onChange={(e) => setDuration(e.target.value)}
-                              className="h-12 text-center"
+                              className="h-11 text-center"
                               data-testid="input-exercise-duration"
                             />
                             {selectedPreset && duration && (
@@ -291,6 +379,9 @@ export default function Exercises() {
                                 السعرات المحروقة: <span className="font-bold text-primary">
                                   {selectedPreset.caloriesPerMin * parseInt(duration || "0")}
                                 </span>
+                                {weight && (
+                                  <span className="text-muted-foreground"> | الوزن: {weight} كجم</span>
+                                )}
                               </p>
                             )}
                           </div>
