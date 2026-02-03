@@ -2,8 +2,9 @@ import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useMeals, useDeleteMeal, useCreateMeal } from "@/hooks/use-meals";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,8 @@ import { HabitsTracker } from "@/components/dashboard/HabitsTracker";
 import { BarcodeScanner } from "@/components/barcode/BarcodeScanner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Trash2, 
   Loader2, 
@@ -34,7 +37,10 @@ import {
   Beef,
   Wheat,
   Droplets,
-  ChevronLeft
+  ChevronLeft,
+  Pencil,
+  Bookmark,
+  Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -65,9 +71,39 @@ export default function Dashboard() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [isEditingAnalysis, setIsEditingAnalysis] = useState(false);
+  const [editedAnalysis, setEditedAnalysis] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { data: meals, isLoading: mealsLoading } = useMeals(date);
+
+  const saveFoodMutation = useMutation({
+    mutationFn: async (food: { name: string; calories: number; protein: number; carbs: number; fats: number }) => {
+      const response = await apiRequest("POST", "/api/saved-foods", {
+        name: food.name,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fats: food.fats,
+        source: "camera",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-foods"] });
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ الوجبة في المحفوظات",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في حفظ الوجبة",
+        variant: "destructive",
+      });
+    },
+  });
   const { data: goals, isLoading: goalsLoading } = useGoals();
   const { data: waterData, isLoading: waterLoading } = useWaterIntake(date);
   const updateWater = useUpdateWaterIntake();
@@ -99,6 +135,7 @@ export default function Dashboard() {
       
       if (result.success && result.meal) {
         setAnalysisResult(result.meal);
+        setEditedAnalysis(result.meal);
         setShowResultDialog(true);
       } else {
         toast({
@@ -121,23 +158,27 @@ export default function Dashboard() {
     }
   };
 
+  const currentAnalysis = isEditingAnalysis ? editedAnalysis : analysisResult;
+
   const handleAddAnalyzedMeal = async () => {
-    if (!analysisResult) return;
+    if (!currentAnalysis) return;
 
     try {
       await createMeal.mutateAsync({
-        name: analysisResult.name,
-        calories: analysisResult.calories,
-        protein: analysisResult.protein,
-        carbs: analysisResult.carbs,
-        fats: analysisResult.fats,
+        name: currentAnalysis.name,
+        calories: currentAnalysis.calories,
+        protein: currentAnalysis.protein,
+        carbs: currentAnalysis.carbs,
+        fats: currentAnalysis.fats,
       });
       toast({
         title: "تمت الإضافة",
-        description: `تم إضافة ${analysisResult.name} إلى وجباتك`,
+        description: `تم إضافة ${currentAnalysis.name} إلى وجباتك`,
       });
       setShowResultDialog(false);
       setAnalysisResult(null);
+      setEditedAnalysis(null);
+      setIsEditingAnalysis(false);
     } catch (error) {
       toast({
         title: "خطأ",
@@ -447,7 +488,12 @@ export default function Dashboard() {
       />
 
       {/* Analysis Result Dialog */}
-      <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+      <Dialog open={showResultDialog} onOpenChange={(open) => {
+        setShowResultDialog(open);
+        if (!open) {
+          setIsEditingAnalysis(false);
+        }
+      }}>
         <DialogContent className="sm:max-w-[400px]" dir="rtl">
           <DialogHeader>
             <DialogTitle>نتيجة التحليل</DialogTitle>
@@ -455,40 +501,139 @@ export default function Dashboard() {
           
           {analysisResult && (
             <div className="space-y-4">
-              <div className="text-center">
-                <h3 className="text-xl font-bold">{analysisResult.name}</h3>
-              </div>
+              {isEditingAnalysis ? (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="edit-analysis-name">اسم الوجبة</Label>
+                    <Input
+                      id="edit-analysis-name"
+                      value={editedAnalysis?.name || ""}
+                      onChange={(e) => setEditedAnalysis({ ...editedAnalysis, name: e.target.value })}
+                      className="text-right"
+                      data-testid="input-edit-analysis-name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="edit-analysis-calories">السعرات</Label>
+                      <Input
+                        id="edit-analysis-calories"
+                        type="number"
+                        value={editedAnalysis?.calories || 0}
+                        onChange={(e) => setEditedAnalysis({ ...editedAnalysis, calories: parseInt(e.target.value) || 0 })}
+                        className="text-center"
+                        data-testid="input-edit-analysis-calories"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-analysis-protein">البروتين (g)</Label>
+                      <Input
+                        id="edit-analysis-protein"
+                        type="number"
+                        value={editedAnalysis?.protein || 0}
+                        onChange={(e) => setEditedAnalysis({ ...editedAnalysis, protein: parseInt(e.target.value) || 0 })}
+                        className="text-center"
+                        data-testid="input-edit-analysis-protein"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-analysis-carbs">الكربوهيدرات (g)</Label>
+                      <Input
+                        id="edit-analysis-carbs"
+                        type="number"
+                        value={editedAnalysis?.carbs || 0}
+                        onChange={(e) => setEditedAnalysis({ ...editedAnalysis, carbs: parseInt(e.target.value) || 0 })}
+                        className="text-center"
+                        data-testid="input-edit-analysis-carbs"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-analysis-fats">الدهون (g)</Label>
+                      <Input
+                        id="edit-analysis-fats"
+                        type="number"
+                        value={editedAnalysis?.fats || 0}
+                        onChange={(e) => setEditedAnalysis({ ...editedAnalysis, fats: parseInt(e.target.value) || 0 })}
+                        className="text-center"
+                        data-testid="input-edit-analysis-fats"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setAnalysisResult(editedAnalysis);
+                      setIsEditingAnalysis(false);
+                    }}
+                    data-testid="button-save-analysis-edit"
+                  >
+                    <Check className="w-4 h-4 ml-2" />
+                    حفظ التعديلات
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold">{currentAnalysis?.name}</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-primary/10 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-primary">{currentAnalysis?.calories}</p>
+                      <p className="text-xs text-muted-foreground">سعرة حرارية</p>
+                    </div>
+                    <div className="bg-green-100 dark:bg-green-900/30 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-green-600">{currentAnalysis?.protein}g</p>
+                      <p className="text-xs text-muted-foreground">بروتين</p>
+                    </div>
+                    <div className="bg-orange-100 dark:bg-orange-900/30 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-orange-600">{currentAnalysis?.carbs}g</p>
+                      <p className="text-xs text-muted-foreground">كربوهيدرات</p>
+                    </div>
+                    <div className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-purple-600">{currentAnalysis?.fats}g</p>
+                      <p className="text-xs text-muted-foreground">دهون</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setIsEditingAnalysis(true)}
+                      data-testid="button-edit-analysis"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => currentAnalysis && saveFoodMutation.mutate(currentAnalysis)}
+                      disabled={saveFoodMutation.isPending}
+                      data-testid="button-save-analysis-favorite"
+                    >
+                      {saveFoodMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Bookmark className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => setShowResultDialog(false)}
+                      data-testid="button-cancel-analysis"
+                    >
+                      إلغاء
+                    </Button>
+                  </div>
+                </>
+              )}
               
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-primary/10 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-primary">{analysisResult.calories}</p>
-                  <p className="text-xs text-muted-foreground">سعرة حرارية</p>
-                </div>
-                <div className="bg-green-100 dark:bg-green-900/30 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-green-600">{analysisResult.protein}g</p>
-                  <p className="text-xs text-muted-foreground">بروتين</p>
-                </div>
-                <div className="bg-orange-100 dark:bg-orange-900/30 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-orange-600">{analysisResult.carbs}g</p>
-                  <p className="text-xs text-muted-foreground">كربوهيدرات</p>
-                </div>
-                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-purple-600">{analysisResult.fats}g</p>
-                  <p className="text-xs text-muted-foreground">دهون</p>
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
+              {!isEditingAnalysis && (
                 <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => setShowResultDialog(false)}
-                  data-testid="button-cancel-analysis"
-                >
-                  إلغاء
-                </Button>
-                <Button 
-                  className="flex-1 bg-gradient-to-r from-primary to-emerald-500"
+                  className="w-full bg-gradient-to-r from-primary to-emerald-500"
                   onClick={handleAddAnalyzedMeal}
                   disabled={createMeal.isPending}
                   data-testid="button-confirm-analysis"
@@ -499,7 +644,7 @@ export default function Dashboard() {
                     "إضافة الوجبة"
                   )}
                 </Button>
-              </div>
+              )}
             </div>
           )}
         </DialogContent>

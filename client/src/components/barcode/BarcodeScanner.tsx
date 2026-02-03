@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-import { Loader2, ScanBarcode } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, ScanBarcode, Pencil, Bookmark, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMeal } from "@/hooks/use-meals";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useMutation } from "@tanstack/react-query";
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -25,6 +28,7 @@ interface ProductInfo {
   carbs: number;
   fats: number;
   servingSize?: string;
+  barcode?: string;
 }
 
 export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
@@ -32,9 +36,40 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
   const [scannerReady, setScannerReady] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProduct, setEditedProduct] = useState<ProductInfo | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const { toast } = useToast();
   const createMeal = useCreateMeal();
+
+  const saveFoodMutation = useMutation({
+    mutationFn: async (food: ProductInfo) => {
+      const response = await apiRequest("POST", "/api/saved-foods", {
+        name: food.name,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fats: food.fats,
+        barcode: food.barcode || null,
+        source: "barcode",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-foods"] });
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ المنتج في المحفوظات",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في حفظ المنتج",
+        variant: "destructive",
+      });
+    },
+  });
 
   const startScanner = useCallback(async () => {
     if (isScanning) return;
@@ -90,7 +125,7 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
     if (scannerRef.current) {
       try {
         const state = scannerRef.current.getState();
-        if (state === 2) { // SCANNING
+        if (state === 2) {
           await scannerRef.current.stop();
         }
         scannerRef.current = null;
@@ -109,7 +144,9 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
       const result = await response.json();
 
       if (result.success && result.product) {
-        setProductInfo(result.product);
+        const product = { ...result.product, barcode };
+        setProductInfo(product);
+        setEditedProduct(product);
       } else {
         toast({
           title: "المنتج غير موجود",
@@ -130,7 +167,6 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
     }
   };
 
-  // Start scanner when dialog opens and container is ready
   useEffect(() => {
     if (open && scannerReady && !isScanning && !productInfo && !isLoading) {
       const timer = setTimeout(() => {
@@ -140,35 +176,36 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
     }
   }, [open, scannerReady, isScanning, productInfo, isLoading, startScanner]);
 
-  // Cleanup on close
   useEffect(() => {
     if (!open) {
       stopScanner();
       setScannerReady(false);
+      setIsEditing(false);
     }
   }, [open]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopScanner();
     };
   }, []);
 
+  const currentProduct = isEditing ? editedProduct : productInfo;
+
   const handleAddMeal = async () => {
-    if (!productInfo) return;
+    if (!currentProduct) return;
 
     try {
       await createMeal.mutateAsync({
-        name: productInfo.name,
-        calories: productInfo.calories,
-        protein: productInfo.protein,
-        carbs: productInfo.carbs,
-        fats: productInfo.fats,
+        name: currentProduct.name,
+        calories: currentProduct.calories,
+        protein: currentProduct.protein,
+        carbs: currentProduct.carbs,
+        fats: currentProduct.fats,
       });
       toast({
         title: "تمت الإضافة",
-        description: `تم إضافة ${productInfo.name} إلى وجباتك`,
+        description: `تم إضافة ${currentProduct.name} إلى وجباتك`,
       });
       handleClose();
     } catch (error) {
@@ -180,24 +217,47 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
     }
   };
 
+  const handleSaveToFavorites = async () => {
+    if (!currentProduct) return;
+    await saveFoodMutation.mutateAsync(currentProduct);
+  };
+
   const handleClose = () => {
     stopScanner();
     setProductInfo(null);
+    setEditedProduct(null);
     setScannerReady(false);
+    setIsEditing(false);
     onOpenChange(false);
   };
 
   const handleRetry = () => {
     setProductInfo(null);
+    setEditedProduct(null);
+    setIsEditing(false);
     setScannerReady(true);
   };
 
-  // Callback to know when element is mounted
+  const handleEditToggle = () => {
+    if (isEditing && editedProduct) {
+      setProductInfo(editedProduct);
+    }
+    setIsEditing(!isEditing);
+  };
+
   const handleContainerMount = useCallback((node: HTMLDivElement | null) => {
     if (node && open) {
       setScannerReady(true);
     }
   }, [open]);
+
+  const updateEditedField = (field: keyof ProductInfo, value: string | number) => {
+    if (!editedProduct) return;
+    setEditedProduct({
+      ...editedProduct,
+      [field]: typeof value === "string" && field !== "name" ? parseInt(value) || 0 : value,
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -220,43 +280,139 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
             </div>
           ) : productInfo ? (
             <div className="space-y-4">
-              <div className="text-center py-2">
-                <h3 className="text-xl font-bold">{productInfo.name}</h3>
-                {productInfo.servingSize && (
-                  <p className="text-sm text-muted-foreground">{productInfo.servingSize}</p>
-                )}
-              </div>
+              {isEditing ? (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="edit-name">اسم المنتج</Label>
+                    <Input
+                      id="edit-name"
+                      value={editedProduct?.name || ""}
+                      onChange={(e) => updateEditedField("name", e.target.value)}
+                      className="text-right"
+                      data-testid="input-edit-name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="edit-calories">السعرات</Label>
+                      <Input
+                        id="edit-calories"
+                        type="number"
+                        value={editedProduct?.calories || 0}
+                        onChange={(e) => updateEditedField("calories", e.target.value)}
+                        className="text-center"
+                        data-testid="input-edit-calories"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-protein">البروتين (g)</Label>
+                      <Input
+                        id="edit-protein"
+                        type="number"
+                        value={editedProduct?.protein || 0}
+                        onChange={(e) => updateEditedField("protein", e.target.value)}
+                        className="text-center"
+                        data-testid="input-edit-protein"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-carbs">الكربوهيدرات (g)</Label>
+                      <Input
+                        id="edit-carbs"
+                        type="number"
+                        value={editedProduct?.carbs || 0}
+                        onChange={(e) => updateEditedField("carbs", e.target.value)}
+                        className="text-center"
+                        data-testid="input-edit-carbs"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-fats">الدهون (g)</Label>
+                      <Input
+                        id="edit-fats"
+                        type="number"
+                        value={editedProduct?.fats || 0}
+                        onChange={(e) => updateEditedField("fats", e.target.value)}
+                        className="text-center"
+                        data-testid="input-edit-fats"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleEditToggle}
+                    data-testid="button-save-edit"
+                  >
+                    <Check className="w-4 h-4 ml-2" />
+                    حفظ التعديلات
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="text-center py-2">
+                    <h3 className="text-xl font-bold">{currentProduct?.name}</h3>
+                    {productInfo.servingSize && (
+                      <p className="text-sm text-muted-foreground">{productInfo.servingSize}</p>
+                    )}
+                  </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-primary/10 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-primary">{productInfo.calories}</p>
-                  <p className="text-xs text-muted-foreground">سعرة حرارية</p>
-                </div>
-                <div className="bg-green-100 dark:bg-green-900/30 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-green-600">{productInfo.protein}g</p>
-                  <p className="text-xs text-muted-foreground">بروتين</p>
-                </div>
-                <div className="bg-orange-100 dark:bg-orange-900/30 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-orange-600">{productInfo.carbs}g</p>
-                  <p className="text-xs text-muted-foreground">كربوهيدرات</p>
-                </div>
-                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-purple-600">{productInfo.fats}g</p>
-                  <p className="text-xs text-muted-foreground">دهون</p>
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-primary/10 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-primary">{currentProduct?.calories}</p>
+                      <p className="text-xs text-muted-foreground">سعرة حرارية</p>
+                    </div>
+                    <div className="bg-green-100 dark:bg-green-900/30 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-green-600">{currentProduct?.protein}g</p>
+                      <p className="text-xs text-muted-foreground">بروتين</p>
+                    </div>
+                    <div className="bg-orange-100 dark:bg-orange-900/30 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-orange-600">{currentProduct?.carbs}g</p>
+                      <p className="text-xs text-muted-foreground">كربوهيدرات</p>
+                    </div>
+                    <div className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-purple-600">{currentProduct?.fats}g</p>
+                      <p className="text-xs text-muted-foreground">دهون</p>
+                    </div>
+                  </div>
 
-              <div className="flex gap-3">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleEditToggle}
+                      data-testid="button-edit-product"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleSaveToFavorites}
+                      disabled={saveFoodMutation.isPending}
+                      data-testid="button-save-favorite"
+                    >
+                      {saveFoodMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Bookmark className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleRetry}
+                      data-testid="button-barcode-retry"
+                    >
+                      مسح آخر
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {!isEditing && (
                 <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={handleRetry}
-                  data-testid="button-barcode-retry"
-                >
-                  مسح آخر
-                </Button>
-                <Button
-                  className="flex-1 bg-gradient-to-r from-primary to-emerald-500"
+                  className="w-full bg-gradient-to-r from-primary to-emerald-500"
                   onClick={handleAddMeal}
                   disabled={createMeal.isPending}
                   data-testid="button-barcode-add"
@@ -267,7 +423,7 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
                     "إضافة الوجبة"
                   )}
                 </Button>
-              </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
