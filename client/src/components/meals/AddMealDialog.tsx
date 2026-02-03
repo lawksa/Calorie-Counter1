@@ -212,60 +212,166 @@ export function AddMealDialog({ date, externalOpen, onExternalOpenChange }: AddM
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="name" className="font-medium">اسم الوجبة</Label>
-                <Input 
-                  id="name" 
-                  {...form.register("name")} 
-                  placeholder="مثال: شوفان مع فواكه" 
-                  className="h-12 rounded-xl"
-                />
+                <div className="flex gap-2">
+                  <Input 
+                    id="name" 
+                    {...form.register("name")} 
+                    placeholder="مثال: شوفان مع فواكه" 
+                    className="h-12 rounded-xl flex-1"
+                    data-testid="input-meal-name"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 px-4 rounded-xl gap-2 shrink-0"
+                    onClick={async () => {
+                      const name = form.getValues("name");
+                      if (!name.trim()) {
+                        toast({ title: "أدخل اسم الوجبة أولاً", variant: "destructive" });
+                        return;
+                      }
+                      try {
+                        const result = await estimateCalories.mutateAsync(name);
+                        form.setValue("calories", result.calories);
+                        form.setValue("protein", result.protein);
+                        form.setValue("carbs", result.carbs);
+                        form.setValue("fats", result.fats);
+                        toast({ title: "تم تحديث القيم الغذائية" });
+                      } catch {
+                        toast({ title: "فشل التقدير", variant: "destructive" });
+                      }
+                    }}
+                    disabled={estimateCalories.isPending}
+                    data-testid="button-estimate-manual"
+                  >
+                    {estimateCalories.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    تقدير
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  اكتب اسم الوجبة واضغط "تقدير" للحصول على القيم الغذائية التقريبية
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="calories" className="font-medium text-primary">السعرات</Label>
-                  <Input 
-                    id="calories" 
-                    type="number" 
-                    {...form.register("calories")} 
-                    className="h-12 rounded-xl border-primary/30 focus-visible:ring-primary"
-                  />
+              <AnimatePresence>
+                {(form.watch("calories") > 0 || form.watch("protein") > 0) && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-muted/50 p-4 rounded-xl space-y-3"
+                  >
+                    <p className="text-sm font-medium text-muted-foreground">القيم الغذائية (قابلة للتعديل)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="calories" className="text-xs font-medium text-primary flex items-center gap-1">
+                          <Flame className="w-3 h-3" /> السعرات
+                        </Label>
+                        <Input 
+                          id="calories" 
+                          type="number" 
+                          {...form.register("calories")} 
+                          className="h-10 rounded-lg border-primary/30 focus-visible:ring-primary"
+                          data-testid="input-meal-calories"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="protein" className="text-xs font-medium flex items-center gap-1" style={{ color: "hsl(142 71% 45%)" }}>
+                          <Beef className="w-3 h-3" /> البروتين (غ)
+                        </Label>
+                        <Input 
+                          id="protein" 
+                          type="number" 
+                          {...form.register("protein")}
+                          className="h-10 rounded-lg"
+                          style={{ borderColor: "hsl(142 71% 45% / 0.3)" }}
+                          data-testid="input-meal-protein"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="carbs" className="text-xs font-medium flex items-center gap-1" style={{ color: "hsl(25 95% 53%)" }}>
+                          <Wheat className="w-3 h-3" /> الكربوهيدرات (غ)
+                        </Label>
+                        <Input 
+                          id="carbs" 
+                          type="number" 
+                          {...form.register("carbs")} 
+                          className="h-10 rounded-lg"
+                          style={{ borderColor: "hsl(25 95% 53% / 0.3)" }}
+                          data-testid="input-meal-carbs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="fats" className="text-xs font-medium flex items-center gap-1" style={{ color: "hsl(271 81% 56%)" }}>
+                          <Droplets className="w-3 h-3" /> الدهون (غ)
+                        </Label>
+                        <Input 
+                          id="fats" 
+                          type="number" 
+                          {...form.register("fats")} 
+                          className="h-10 rounded-lg"
+                          style={{ borderColor: "hsl(271 81% 56% / 0.3)" }}
+                          data-testid="input-meal-fats"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {(!form.watch("calories") && !form.watch("protein")) && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="calories-init" className="font-medium text-primary">السعرات</Label>
+                    <Input 
+                      id="calories-init" 
+                      type="number" 
+                      {...form.register("calories")} 
+                      className="h-12 rounded-xl border-primary/30 focus-visible:ring-primary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="protein-init" className="font-medium" style={{ color: "hsl(142 71% 45%)" }}>البروتين (غ)</Label>
+                    <Input 
+                      id="protein-init" 
+                      type="number" 
+                      {...form.register("protein")}
+                      className="h-12 rounded-xl"
+                      style={{ borderColor: "hsl(142 71% 45% / 0.3)" }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="carbs-init" className="font-medium" style={{ color: "hsl(25 95% 53%)" }}>الكربوهيدرات (غ)</Label>
+                    <Input 
+                      id="carbs-init" 
+                      type="number" 
+                      {...form.register("carbs")} 
+                      className="h-12 rounded-xl"
+                      style={{ borderColor: "hsl(25 95% 53% / 0.3)" }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fats-init" className="font-medium" style={{ color: "hsl(271 81% 56%)" }}>الدهون (غ)</Label>
+                    <Input 
+                      id="fats-init" 
+                      type="number" 
+                      {...form.register("fats")} 
+                      className="h-12 rounded-xl"
+                      style={{ borderColor: "hsl(271 81% 56% / 0.3)" }}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="protein" className="font-medium" style={{ color: "hsl(142 71% 45%)" }}>البروتين (غ)</Label>
-                  <Input 
-                    id="protein" 
-                    type="number" 
-                    {...form.register("protein")}
-                    className="h-12 rounded-xl"
-                    style={{ borderColor: "hsl(142 71% 45% / 0.3)" }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="carbs" className="font-medium" style={{ color: "hsl(25 95% 53%)" }}>الكربوهيدرات (غ)</Label>
-                  <Input 
-                    id="carbs" 
-                    type="number" 
-                    {...form.register("carbs")} 
-                    className="h-12 rounded-xl"
-                    style={{ borderColor: "hsl(25 95% 53% / 0.3)" }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fats" className="font-medium" style={{ color: "hsl(271 81% 56%)" }}>الدهون (غ)</Label>
-                  <Input 
-                    id="fats" 
-                    type="number" 
-                    {...form.register("fats")} 
-                    className="h-12 rounded-xl"
-                    style={{ borderColor: "hsl(271 81% 56% / 0.3)" }}
-                  />
-                </div>
-              </div>
+              )}
 
               <Button 
                 type="submit" 
                 className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-emerald-500 rounded-2xl shadow-lg mt-4"
                 disabled={createMeal.isPending}
+                data-testid="button-add-meal-manual"
               >
                 {createMeal.isPending ? "جاري الإضافة..." : "إضافة الوجبة"}
               </Button>
