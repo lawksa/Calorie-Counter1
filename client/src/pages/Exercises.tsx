@@ -44,6 +44,48 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+
+// Import exercise images
+import treadmillImg from "@/assets/exercises/treadmill.jpg";
+import bikeImg from "@/assets/exercises/bike.jpg";
+import ellipticalImg from "@/assets/exercises/elliptical.jpg";
+import rowingImg from "@/assets/exercises/rowing.jpg";
+import stairImg from "@/assets/exercises/stair.jpg";
+import benchFlatImg from "@/assets/exercises/bench-flat.jpg";
+import benchInclineImg from "@/assets/exercises/bench-incline.jpg";
+import chestPressImg from "@/assets/exercises/chest-press.jpg";
+import pecDeckImg from "@/assets/exercises/pec-deck.jpg";
+import latPulldownImg from "@/assets/exercises/lat-pulldown.jpg";
+import seatedRowImg from "@/assets/exercises/seated-row.jpg";
+import shoulderPressImg from "@/assets/exercises/shoulder-press.jpg";
+import bicepCurlImg from "@/assets/exercises/bicep-curl.jpg";
+import tricepPushdownImg from "@/assets/exercises/tricep-pushdown.jpg";
+import legPressImg from "@/assets/exercises/leg-press.jpg";
+import squatRackImg from "@/assets/exercises/squat-rack.jpg";
+import legExtensionImg from "@/assets/exercises/leg-extension.jpg";
+import legCurlImg from "@/assets/exercises/leg-curl.jpg";
+import cableMachineImg from "@/assets/exercises/cable-machine.jpg";
+import smithMachineImg from "@/assets/exercises/smith-machine.jpg";
+import dumbbellsImg from "@/assets/exercises/dumbbells.jpg";
+import kettlebellImg from "@/assets/exercises/kettlebell.jpg";
+import hackSquatImg from "@/assets/exercises/hack-squat.jpg";
+import abMachineImg from "@/assets/exercises/ab-machine.jpg";
+import calfRaiseImg from "@/assets/exercises/calf-raise.jpg";
+import walkingImg from "@/assets/exercises/walking.jpg";
+import pushupImg from "@/assets/exercises/pushup.jpg";
+import plankImg from "@/assets/exercises/plank.jpg";
+import squatImg from "@/assets/exercises/squat.jpg";
+import yogaImg from "@/assets/exercises/yoga.jpg";
+import jumpRopeImg from "@/assets/exercises/jump-rope.jpg";
+import burpeeImg from "@/assets/exercises/burpee.jpg";
+import lungeImg from "@/assets/exercises/lunge.jpg";
+import runningImg from "@/assets/exercises/running.jpg";
+import crunchesImg from "@/assets/exercises/crunches.jpg";
+import stretchingImg from "@/assets/exercises/stretching.jpg";
+import hiitImg from "@/assets/exercises/hiit.jpg";
+import tBarImg from "@/assets/exercises/t-bar.jpg";
+import lateralRaiseImg from "@/assets/exercises/lateral-raise.jpg";
+import dumbbellCurlImg from "@/assets/exercises/dumbbell-curl.jpg";
 import {
   Dialog,
   DialogContent,
@@ -68,69 +110,69 @@ const exerciseTypes = [
 
 // Home exercises - no equipment needed
 const homeExercises = [
-  { name: "المشي", nameAr: "المشي", type: "cardio", caloriesPerMin: 5, icon: Footprints, color: "text-green-500", needsWeight: false },
-  { name: "الجري في المكان", nameAr: "الجري في المكان", type: "cardio", caloriesPerMin: 10, icon: Zap, color: "text-orange-500", needsWeight: false },
-  { name: "نط الحبل", nameAr: "نط الحبل", type: "cardio", caloriesPerMin: 12, icon: RotateCcw, color: "text-pink-500", needsWeight: false },
-  { name: "تمارين الضغط", nameAr: "تمارين الضغط", type: "strength", caloriesPerMin: 8, icon: ArrowUpDown, color: "text-blue-500", needsWeight: false },
-  { name: "تمارين البطن", nameAr: "تمارين البطن", type: "strength", caloriesPerMin: 6, icon: CircleDot, color: "text-amber-500", needsWeight: false },
-  { name: "السكوات", nameAr: "السكوات", type: "strength", caloriesPerMin: 7, icon: PersonStanding, color: "text-indigo-500", needsWeight: false },
-  { name: "تمارين البلانك", nameAr: "تمارين البلانك", type: "strength", caloriesPerMin: 5, icon: StretchHorizontal, color: "text-cyan-500", needsWeight: false },
-  { name: "اليوغا", nameAr: "اليوغا", type: "flexibility", caloriesPerMin: 4, icon: Heart, color: "text-purple-500", needsWeight: false },
-  { name: "تمدد", nameAr: "تمدد", type: "flexibility", caloriesPerMin: 3, icon: Move, color: "text-teal-500", needsWeight: false },
-  { name: "تمارين HIIT", nameAr: "تمارين HIIT", type: "cardio", caloriesPerMin: 14, icon: Flame, color: "text-red-500", needsWeight: false },
-  { name: "بيربي", nameAr: "بيربي (Burpees)", type: "cardio", caloriesPerMin: 12, icon: Zap, color: "text-rose-500", needsWeight: false },
-  { name: "لانجز", nameAr: "لانجز (Lunges)", type: "strength", caloriesPerMin: 6, icon: Footprints, color: "text-violet-500", needsWeight: false },
+  { name: "المشي", nameAr: "المشي", type: "cardio", caloriesPerMin: 5, icon: Footprints, color: "text-green-500", needsWeight: false, image: walkingImg },
+  { name: "الجري في المكان", nameAr: "الجري في المكان", type: "cardio", caloriesPerMin: 10, icon: Zap, color: "text-orange-500", needsWeight: false, image: runningImg },
+  { name: "نط الحبل", nameAr: "نط الحبل", type: "cardio", caloriesPerMin: 12, icon: RotateCcw, color: "text-pink-500", needsWeight: false, image: jumpRopeImg },
+  { name: "تمارين الضغط", nameAr: "تمارين الضغط", type: "strength", caloriesPerMin: 8, icon: ArrowUpDown, color: "text-blue-500", needsWeight: false, image: pushupImg },
+  { name: "تمارين البطن", nameAr: "تمارين البطن", type: "strength", caloriesPerMin: 6, icon: CircleDot, color: "text-amber-500", needsWeight: false, image: crunchesImg },
+  { name: "السكوات", nameAr: "السكوات", type: "strength", caloriesPerMin: 7, icon: PersonStanding, color: "text-indigo-500", needsWeight: false, image: squatImg },
+  { name: "تمارين البلانك", nameAr: "تمارين البلانك", type: "strength", caloriesPerMin: 5, icon: StretchHorizontal, color: "text-cyan-500", needsWeight: false, image: plankImg },
+  { name: "اليوغا", nameAr: "اليوغا", type: "flexibility", caloriesPerMin: 4, icon: Heart, color: "text-purple-500", needsWeight: false, image: yogaImg },
+  { name: "تمدد", nameAr: "تمدد", type: "flexibility", caloriesPerMin: 3, icon: Move, color: "text-teal-500", needsWeight: false, image: stretchingImg },
+  { name: "تمارين HIIT", nameAr: "تمارين HIIT", type: "cardio", caloriesPerMin: 14, icon: Flame, color: "text-red-500", needsWeight: false, image: hiitImg },
+  { name: "بيربي", nameAr: "بيربي (Burpees)", type: "cardio", caloriesPerMin: 12, icon: Zap, color: "text-rose-500", needsWeight: false, image: burpeeImg },
+  { name: "لانجز", nameAr: "لانجز (Lunges)", type: "strength", caloriesPerMin: 6, icon: Footprints, color: "text-violet-500", needsWeight: false, image: lungeImg },
 ];
 
 // Gym exercises - equipment found in Saudi gyms (Fitness Time, Leejam, Gold's Gym, etc.)
 const gymExercises = [
   // Cardio Equipment
-  { name: "جهاز المشي", nameAr: "جهاز المشي", type: "cardio", caloriesPerMin: 10, icon: Activity, color: "text-green-500", needsWeight: false },
-  { name: "الدراجة الثابتة", nameAr: "الدراجة الثابتة", type: "cardio", caloriesPerMin: 8, icon: Bike, color: "text-blue-500", needsWeight: false },
-  { name: "جهاز الإليبتيكال", nameAr: "الإليبتيكال", type: "cardio", caloriesPerMin: 9, icon: Waves, color: "text-cyan-500", needsWeight: false },
-  { name: "جهاز التجديف", nameAr: "جهاز التجديف", type: "cardio", caloriesPerMin: 11, icon: Waves, color: "text-teal-500", needsWeight: false },
-  { name: "جهاز الدرج", nameAr: "جهاز الدرج", type: "cardio", caloriesPerMin: 12, icon: Mountain, color: "text-orange-500", needsWeight: false },
+  { name: "جهاز المشي", nameAr: "جهاز المشي", type: "cardio", caloriesPerMin: 10, icon: Activity, color: "text-green-500", needsWeight: false, image: treadmillImg },
+  { name: "الدراجة الثابتة", nameAr: "الدراجة الثابتة", type: "cardio", caloriesPerMin: 8, icon: Bike, color: "text-blue-500", needsWeight: false, image: bikeImg },
+  { name: "جهاز الإليبتيكال", nameAr: "الإليبتيكال", type: "cardio", caloriesPerMin: 9, icon: Waves, color: "text-cyan-500", needsWeight: false, image: ellipticalImg },
+  { name: "جهاز التجديف", nameAr: "جهاز التجديف", type: "cardio", caloriesPerMin: 11, icon: Waves, color: "text-teal-500", needsWeight: false, image: rowingImg },
+  { name: "جهاز الدرج", nameAr: "جهاز الدرج", type: "cardio", caloriesPerMin: 12, icon: Mountain, color: "text-orange-500", needsWeight: false, image: stairImg },
   
   // Chest
-  { name: "بنش مسطح", nameAr: "بنش مسطح", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-500", needsWeight: true },
-  { name: "بنش مائل علوي", nameAr: "بنش مائل علوي", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-400", needsWeight: true },
-  { name: "بنش مائل سفلي", nameAr: "بنش مائل سفلي", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-600", needsWeight: true },
-  { name: "جهاز الصدر", nameAr: "جهاز الصدر (Chest Press)", type: "strength", caloriesPerMin: 6, icon: Target, color: "text-rose-500", needsWeight: true },
-  { name: "تفتيح صدر", nameAr: "تفتيح صدر (Pec Deck)", type: "strength", caloriesPerMin: 5, icon: Move, color: "text-pink-500", needsWeight: true },
+  { name: "بنش مسطح", nameAr: "بنش مسطح", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-500", needsWeight: true, image: benchFlatImg },
+  { name: "بنش مائل علوي", nameAr: "بنش مائل علوي", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-400", needsWeight: true, image: benchInclineImg },
+  { name: "بنش مائل سفلي", nameAr: "بنش مائل سفلي", type: "strength", caloriesPerMin: 6, icon: Square, color: "text-red-600", needsWeight: true, image: benchInclineImg },
+  { name: "جهاز الصدر", nameAr: "جهاز الصدر (Chest Press)", type: "strength", caloriesPerMin: 6, icon: Target, color: "text-rose-500", needsWeight: true, image: chestPressImg },
+  { name: "تفتيح صدر", nameAr: "تفتيح صدر (Pec Deck)", type: "strength", caloriesPerMin: 5, icon: Move, color: "text-pink-500", needsWeight: true, image: pecDeckImg },
   
   // Back
-  { name: "سحب أمامي", nameAr: "سحب أمامي (Lat Pulldown)", type: "strength", caloriesPerMin: 6, icon: ArrowUpDown, color: "text-blue-500", needsWeight: true },
-  { name: "سحب أرضي", nameAr: "سحب أرضي (Seated Row)", type: "strength", caloriesPerMin: 6, icon: Grip, color: "text-blue-600", needsWeight: true },
-  { name: "تي بار", nameAr: "تي بار (T-Bar Row)", type: "strength", caloriesPerMin: 7, icon: Dumbbell, color: "text-indigo-500", needsWeight: true },
+  { name: "سحب أمامي", nameAr: "سحب أمامي (Lat Pulldown)", type: "strength", caloriesPerMin: 6, icon: ArrowUpDown, color: "text-blue-500", needsWeight: true, image: latPulldownImg },
+  { name: "سحب أرضي", nameAr: "سحب أرضي (Seated Row)", type: "strength", caloriesPerMin: 6, icon: Grip, color: "text-blue-600", needsWeight: true, image: seatedRowImg },
+  { name: "تي بار", nameAr: "تي بار (T-Bar Row)", type: "strength", caloriesPerMin: 7, icon: Dumbbell, color: "text-indigo-500", needsWeight: true, image: tBarImg },
   
   // Shoulders
-  { name: "كتف أمامي", nameAr: "كتف أمامي (Front Raise)", type: "strength", caloriesPerMin: 5, icon: CircleUser, color: "text-amber-500", needsWeight: true },
-  { name: "كتف جانبي", nameAr: "كتف جانبي (Lateral Raise)", type: "strength", caloriesPerMin: 5, icon: Move, color: "text-yellow-500", needsWeight: true },
-  { name: "شولدر برس", nameAr: "شولدر برس (Shoulder Press)", type: "strength", caloriesPerMin: 6, icon: ArrowUpDown, color: "text-orange-500", needsWeight: true },
+  { name: "كتف أمامي", nameAr: "كتف أمامي (Front Raise)", type: "strength", caloriesPerMin: 5, icon: CircleUser, color: "text-amber-500", needsWeight: true, image: lateralRaiseImg },
+  { name: "كتف جانبي", nameAr: "كتف جانبي (Lateral Raise)", type: "strength", caloriesPerMin: 5, icon: Move, color: "text-yellow-500", needsWeight: true, image: lateralRaiseImg },
+  { name: "شولدر برس", nameAr: "شولدر برس (Shoulder Press)", type: "strength", caloriesPerMin: 6, icon: ArrowUpDown, color: "text-orange-500", needsWeight: true, image: shoulderPressImg },
   
   // Arms
-  { name: "باي بار", nameAr: "باي بار (Barbell Curl)", type: "strength", caloriesPerMin: 5, icon: Dumbbell, color: "text-purple-500", needsWeight: true },
-  { name: "باي دمبل", nameAr: "باي دمبل (Dumbbell Curl)", type: "strength", caloriesPerMin: 5, icon: Weight, color: "text-violet-500", needsWeight: true },
-  { name: "تراي كيبل", nameAr: "تراي كيبل (Tricep Pushdown)", type: "strength", caloriesPerMin: 5, icon: Cable, color: "text-fuchsia-500", needsWeight: true },
-  { name: "تراي سكل كراشر", nameAr: "سكل كراشر (Skull Crusher)", type: "strength", caloriesPerMin: 5, icon: Dumbbell, color: "text-pink-600", needsWeight: true },
+  { name: "باي بار", nameAr: "باي بار (Barbell Curl)", type: "strength", caloriesPerMin: 5, icon: Dumbbell, color: "text-purple-500", needsWeight: true, image: bicepCurlImg },
+  { name: "باي دمبل", nameAr: "باي دمبل (Dumbbell Curl)", type: "strength", caloriesPerMin: 5, icon: Weight, color: "text-violet-500", needsWeight: true, image: dumbbellCurlImg },
+  { name: "تراي كيبل", nameAr: "تراي كيبل (Tricep Pushdown)", type: "strength", caloriesPerMin: 5, icon: Cable, color: "text-fuchsia-500", needsWeight: true, image: tricepPushdownImg },
+  { name: "تراي سكل كراشر", nameAr: "سكل كراشر (Skull Crusher)", type: "strength", caloriesPerMin: 5, icon: Dumbbell, color: "text-pink-600", needsWeight: true, image: dumbbellsImg },
   
   // Legs
-  { name: "ليج برس", nameAr: "ليج برس (Leg Press)", type: "strength", caloriesPerMin: 8, icon: Box, color: "text-emerald-500", needsWeight: true },
-  { name: "سكوات راك", nameAr: "سكوات راك (Squat Rack)", type: "strength", caloriesPerMin: 9, icon: PersonStanding, color: "text-green-600", needsWeight: true },
-  { name: "ليج اكستنشن", nameAr: "ليج اكستنشن (Leg Extension)", type: "strength", caloriesPerMin: 6, icon: Footprints, color: "text-lime-500", needsWeight: true },
-  { name: "ليج كيرل", nameAr: "ليج كيرل (Leg Curl)", type: "strength", caloriesPerMin: 6, icon: RotateCcw, color: "text-teal-500", needsWeight: true },
-  { name: "كاف ريز", nameAr: "كاف ريز (Calf Raise)", type: "strength", caloriesPerMin: 5, icon: ArrowUpDown, color: "text-cyan-600", needsWeight: true },
-  { name: "هاك سكوات", nameAr: "هاك سكوات (Hack Squat)", type: "strength", caloriesPerMin: 8, icon: Shield, color: "text-green-500", needsWeight: true },
+  { name: "ليج برس", nameAr: "ليج برس (Leg Press)", type: "strength", caloriesPerMin: 8, icon: Box, color: "text-emerald-500", needsWeight: true, image: legPressImg },
+  { name: "سكوات راك", nameAr: "سكوات راك (Squat Rack)", type: "strength", caloriesPerMin: 9, icon: PersonStanding, color: "text-green-600", needsWeight: true, image: squatRackImg },
+  { name: "ليج اكستنشن", nameAr: "ليج اكستنشن (Leg Extension)", type: "strength", caloriesPerMin: 6, icon: Footprints, color: "text-lime-500", needsWeight: true, image: legExtensionImg },
+  { name: "ليج كيرل", nameAr: "ليج كيرل (Leg Curl)", type: "strength", caloriesPerMin: 6, icon: RotateCcw, color: "text-teal-500", needsWeight: true, image: legCurlImg },
+  { name: "كاف ريز", nameAr: "كاف ريز (Calf Raise)", type: "strength", caloriesPerMin: 5, icon: ArrowUpDown, color: "text-cyan-600", needsWeight: true, image: calfRaiseImg },
+  { name: "هاك سكوات", nameAr: "هاك سكوات (Hack Squat)", type: "strength", caloriesPerMin: 8, icon: Shield, color: "text-green-500", needsWeight: true, image: hackSquatImg },
   
   // Core
-  { name: "جهاز البطن", nameAr: "جهاز البطن (Ab Machine)", type: "strength", caloriesPerMin: 5, icon: CircleDot, color: "text-amber-500", needsWeight: true },
-  { name: "كيبل كرنش", nameAr: "كيبل كرنش (Cable Crunch)", type: "strength", caloriesPerMin: 5, icon: Cable, color: "text-orange-400", needsWeight: true },
+  { name: "جهاز البطن", nameAr: "جهاز البطن (Ab Machine)", type: "strength", caloriesPerMin: 5, icon: CircleDot, color: "text-amber-500", needsWeight: true, image: abMachineImg },
+  { name: "كيبل كرنش", nameAr: "كيبل كرنش (Cable Crunch)", type: "strength", caloriesPerMin: 5, icon: Cable, color: "text-orange-400", needsWeight: true, image: cableMachineImg },
   
   // Multi-purpose
-  { name: "جهاز الكيبل", nameAr: "جهاز الكيبل (Cable Machine)", type: "strength", caloriesPerMin: 6, icon: Cable, color: "text-slate-500", needsWeight: true },
-  { name: "جهاز سميث", nameAr: "جهاز سميث (Smith Machine)", type: "strength", caloriesPerMin: 7, icon: Grip, color: "text-gray-600", needsWeight: true },
-  { name: "الأوزان الحرة", nameAr: "الأوزان الحرة (Free Weights)", type: "strength", caloriesPerMin: 7, icon: Dumbbell, color: "text-zinc-500", needsWeight: true },
-  { name: "الكيتل بيل", nameAr: "كيتل بيل (Kettlebell)", type: "strength", caloriesPerMin: 8, icon: Weight, color: "text-stone-500", needsWeight: true },
+  { name: "جهاز الكيبل", nameAr: "جهاز الكيبل (Cable Machine)", type: "strength", caloriesPerMin: 6, icon: Cable, color: "text-slate-500", needsWeight: true, image: cableMachineImg },
+  { name: "جهاز سميث", nameAr: "جهاز سميث (Smith Machine)", type: "strength", caloriesPerMin: 7, icon: Grip, color: "text-gray-600", needsWeight: true, image: smithMachineImg },
+  { name: "الأوزان الحرة", nameAr: "الأوزان الحرة (Free Weights)", type: "strength", caloriesPerMin: 7, icon: Dumbbell, color: "text-zinc-500", needsWeight: true, image: dumbbellsImg },
+  { name: "الكيتل بيل", nameAr: "كيتل بيل (Kettlebell)", type: "strength", caloriesPerMin: 8, icon: Weight, color: "text-stone-500", needsWeight: true, image: kettlebellImg },
 ];
 
 type ExerciseLocation = "home" | "gym" | null;
@@ -143,6 +185,7 @@ type ExercisePreset = {
   icon: any;
   color: string;
   needsWeight: boolean;
+  image: string;
 };
 
 export default function Exercises() {
@@ -322,23 +365,43 @@ export default function Exercises() {
 
                       {!isCustom ? (
                         <>
-                          <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto">
+                          <div className="grid grid-cols-2 gap-3 max-h-[280px] overflow-y-auto p-1">
                             {(exerciseLocation === "home" ? homeExercises : gymExercises).map((preset) => {
-                              const Icon = preset.icon;
+                              const isSelected = selectedPreset?.name === preset.name;
                               return (
-                                <Button
+                                <button
                                   key={preset.name}
-                                  variant={selectedPreset?.name === preset.name ? "default" : "outline"}
-                                  className="h-auto py-2.5 flex-col gap-1 text-wrap"
                                   onClick={() => {
                                     setSelectedPreset(preset);
                                     if (!preset.needsWeight) setWeight("");
                                   }}
+                                  className={`relative overflow-hidden rounded-xl transition-all ${
+                                    isSelected 
+                                      ? "ring-2 ring-primary ring-offset-2 scale-[1.02]" 
+                                      : "hover:scale-[1.02]"
+                                  }`}
                                   data-testid={`button-exercise-${preset.name}`}
                                 >
-                                  <Icon className={`w-5 h-5 ${preset.color}`} />
-                                  <span className="text-[10px] leading-tight">{preset.nameAr}</span>
-                                </Button>
+                                  <div className="aspect-[4/3] relative">
+                                    <img 
+                                      src={preset.image} 
+                                      alt={preset.nameAr}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                    <div className="absolute bottom-0 left-0 right-0 p-2 text-white text-right">
+                                      <p className="text-xs font-bold leading-tight line-clamp-2">{preset.nameAr}</p>
+                                      <p className="text-[10px] opacity-80">{preset.caloriesPerMin} سعرة/دقيقة</p>
+                                    </div>
+                                    {isSelected && (
+                                      <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      </div>
+                                    )}
+                                  </div>
+                                </button>
                               );
                             })}
                           </div>
