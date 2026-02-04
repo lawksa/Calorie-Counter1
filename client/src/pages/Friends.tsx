@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Users, Search, UserPlus, Check, X, Trophy, Target, 
   Flame, Droplets, Footprints, Dumbbell, Crown, Medal,
-  Plus, Calendar, ChevronLeft
+  Plus, Calendar, ChevronLeft, Star, Zap, Heart, Award, Sparkles, Lock
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -29,6 +29,23 @@ const challengeTypes = [
   { value: 'water', label: 'شرب الماء', icon: Droplets, color: 'from-cyan-400 to-blue-500' },
   { value: 'meals_logged', label: 'تسجيل الوجبات', icon: Target, color: 'from-green-500 to-emerald-500' },
 ];
+
+const achievementBadges = [
+  { id: "streak_3", icon: Flame, title: "بداية موفقة", requirement: 3, color: "text-orange-500", bgColor: "bg-orange-100 dark:bg-orange-900/30" },
+  { id: "streak_7", icon: Star, title: "نجم الأسبوع", requirement: 7, color: "text-yellow-500", bgColor: "bg-yellow-100 dark:bg-yellow-900/30" },
+  { id: "streak_14", icon: Zap, title: "محارب اللياقة", requirement: 14, color: "text-blue-500", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
+  { id: "streak_21", icon: Target, title: "عادة صحية", requirement: 21, color: "text-green-500", bgColor: "bg-green-100 dark:bg-green-900/30" },
+  { id: "streak_30", icon: Medal, title: "بطل الشهر", requirement: 30, color: "text-purple-500", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
+  { id: "streak_60", icon: Award, title: "المثابر", requirement: 60, color: "text-pink-500", bgColor: "bg-pink-100 dark:bg-pink-900/30" },
+  { id: "streak_90", icon: Heart, title: "عاشق الصحة", requirement: 90, color: "text-red-500", bgColor: "bg-red-100 dark:bg-red-900/30" },
+  { id: "streak_180", icon: Crown, title: "الملك", requirement: 180, color: "text-amber-500", bgColor: "bg-amber-100 dark:bg-amber-900/30" },
+  { id: "streak_365", icon: Sparkles, title: "الأسطورة", requirement: 365, color: "text-cyan-500", bgColor: "bg-gradient-to-r from-cyan-100 to-purple-100 dark:from-cyan-900/30 dark:to-purple-900/30" },
+];
+
+interface AchievementStats {
+  currentStreak: number;
+  totalPerfectDays: number;
+}
 
 export default function Friends() {
   const { toast } = useToast();
@@ -50,6 +67,10 @@ export default function Friends() {
 
   const { data: profile, isLoading: profileLoading } = useQuery<User>({
     queryKey: ['/api/profile']
+  });
+
+  const { data: achievementStats } = useQuery<AchievementStats>({
+    queryKey: ['/api/achievements/stats']
   });
 
   const { data: friends = [] } = useQuery<(Friendship & { friend: User })[]>({
@@ -227,6 +248,53 @@ export default function Friends() {
                     <Trophy className="w-3 h-3" />
                     {profile?.totalPoints || 0} نقطة
                   </Badge>
+                </div>
+                
+                {/* Achievement Badges */}
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Award className="w-4 h-4 text-primary" />
+                      شارات الإنجازات
+                    </h4>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Flame className="w-3 h-3 text-orange-500" />
+                      <span>{achievementStats?.currentStreak || 0} يوم متتالي</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {achievementBadges.map((badge) => {
+                      const isUnlocked = (achievementStats?.currentStreak || 0) >= badge.requirement;
+                      const BadgeIcon = badge.icon;
+                      return (
+                        <motion.div
+                          key={badge.id}
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className={`relative group`}
+                          title={`${badge.title} - ${badge.requirement} يوم`}
+                        >
+                          <div className={`
+                            w-10 h-10 rounded-full flex items-center justify-center transition-all
+                            ${isUnlocked ? badge.bgColor : 'bg-muted'}
+                            ${isUnlocked ? 'ring-2 ring-offset-2 ring-primary/20' : ''}
+                          `}>
+                            {isUnlocked ? (
+                              <BadgeIcon className={`w-5 h-5 ${badge.color}`} />
+                            ) : (
+                              <Lock className="w-4 h-4 text-muted-foreground/50" />
+                            )}
+                          </div>
+                          <div className="absolute -bottom-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background border rounded px-1 py-0.5 text-[10px] whitespace-nowrap z-10 shadow-sm">
+                            {badge.title}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    {achievementBadges.filter(b => (achievementStats?.currentStreak || 0) >= b.requirement).length} من {achievementBadges.length} شارة مفتوحة
+                  </p>
                 </div>
               </CardContent>
             </Card>
