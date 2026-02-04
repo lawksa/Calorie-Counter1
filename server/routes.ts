@@ -329,6 +329,102 @@ export async function registerRoutes(
     }
   });
 
+  // --- Achievements/Streak ---
+  app.get("/api/achievements/stats", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    
+    try {
+      const goal = await storage.getGoal(userId);
+      const calorieGoal = goal?.calories || 2000;
+      const waterGoal = goal?.waterGlasses || 8;
+      
+      // Get all data from the past 365 days
+      const endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 365);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const [mealsList, waterList] = await Promise.all([
+        storage.getMealsDateRange(userId, startDate, endDate),
+        storage.getWaterIntakeDateRange(userId, startDate, endDate)
+      ]);
+      
+      // Build daily data map
+      const dailyData: Record<string, { calories: number; water: number; mealsCount: number }> = {};
+      
+      for (const meal of mealsList) {
+        const dateKey = meal.date.toISOString().split('T')[0];
+        if (!dailyData[dateKey]) {
+          dailyData[dateKey] = { calories: 0, water: 0, mealsCount: 0 };
+        }
+        dailyData[dateKey].calories += meal.calories;
+        dailyData[dateKey].mealsCount++;
+      }
+      
+      for (const water of waterList) {
+        const dateKey = water.date.toISOString().split('T')[0];
+        if (!dailyData[dateKey]) {
+          dailyData[dateKey] = { calories: 0, water: 0, mealsCount: 0 };
+        }
+        dailyData[dateKey].water = water.glasses;
+      }
+      
+      // Calculate adherence for each day
+      const isPerfectDay = (data: { calories: number; water: number; mealsCount: number }) => {
+        if (data.mealsCount === 0) return false;
+        
+        // Calories within 20% of goal (not too over or under)
+        const caloriesDiff = Math.abs(data.calories - calorieGoal) / calorieGoal;
+        const caloriesOk = caloriesDiff <= 0.2;
+        
+        // Water at least 70% of goal
+        const waterOk = data.water >= waterGoal * 0.7;
+        
+        return caloriesOk && waterOk;
+      };
+      
+      // Calculate current streak (consecutive perfect days ending today or yesterday)
+      let currentStreak = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      for (let i = 0; i <= 365; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() - i);
+        const dateKey = checkDate.toISOString().split('T')[0];
+        const data = dailyData[dateKey];
+        
+        if (data && isPerfectDay(data)) {
+          currentStreak++;
+        } else if (i === 0) {
+          // Today might not be complete, check yesterday
+          continue;
+        } else {
+          break;
+        }
+      }
+      
+      // Calculate total perfect days
+      let totalPerfectDays = 0;
+      for (const [dateKey, data] of Object.entries(dailyData)) {
+        if (isPerfectDay(data)) {
+          totalPerfectDays++;
+        }
+      }
+      
+      res.json({
+        currentStreak,
+        totalPerfectDays,
+        calorieGoal,
+        waterGoal
+      });
+    } catch (error) {
+      console.error("Achievements stats error:", error);
+      res.status(500).json({ message: "Failed to get achievements stats" });
+    }
+  });
+
   // --- Restaurants ---
   app.get(api.restaurants.list.path, requireAuth, async (req, res) => {
     const restaurantsList = await storage.getRestaurants();

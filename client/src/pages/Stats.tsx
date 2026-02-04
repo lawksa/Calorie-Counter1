@@ -58,52 +58,31 @@ const dayLabels: Record<string, string> = {
   "6": "السبت",
 };
 
-function calculateStreak(stats: any, goals: any): number {
-  if (!stats || !goals) return 0;
-  
-  const caloriesGoal = goals.calories || 2000;
-  const waterGoal = 30;
-  
-  let streak = 0;
-  
-  for (let i = stats.calories.length - 1; i >= 0; i--) {
-    const calories = stats.calories[i]?.value || 0;
-    const water = stats.water[i]?.value || 0;
-    
-    const caloriesOk = calories > 0 && calories <= caloriesGoal * 1.1;
-    const waterOk = water >= waterGoal * 0.8;
-    
-    if (caloriesOk && waterOk) {
-      streak++;
-    } else if (calories > 0 || water > 0) {
-      break;
-    }
-  }
-  
-  return streak;
+interface AchievementStats {
+  currentStreak: number;
+  totalPerfectDays: number;
+  calorieGoal: number;
+  waterGoal: number;
 }
 
-function calculateTotalPerfectDays(stats: any, goals: any): number {
-  if (!stats || !goals) return 0;
+function useAchievementStats() {
+  return useQuery<AchievementStats>({
+    queryKey: ['/api/achievements/stats'],
+    staleTime: 60000,
+  });
+}
+
+function AchievementsSection() {
+  const { data: achievementStats } = useAchievementStats();
   
-  const caloriesGoal = goals.calories || 2000;
-  const waterGoal = 30;
-  
-  let total = 0;
-  
-  for (let i = 0; i < stats.calories.length; i++) {
-    const calories = stats.calories[i]?.value || 0;
-    const water = stats.water[i]?.value || 0;
-    
-    const caloriesOk = calories > 0 && calories <= caloriesGoal * 1.1;
-    const waterOk = water >= waterGoal * 0.8;
-    
-    if (caloriesOk && waterOk) {
-      total++;
-    }
-  }
-  
-  return total;
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+      <AchievementsCard 
+        currentStreak={achievementStats?.currentStreak || 0}
+        totalPerfectDays={achievementStats?.totalPerfectDays || 0}
+      />
+    </motion.div>
+  );
 }
 
 interface DaySummary {
@@ -336,12 +315,7 @@ export default function Stats() {
         </motion.div>
 
         {/* Achievements Tree */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-          <AchievementsCard 
-            currentStreak={calculateStreak(stats, goals)}
-            totalPerfectDays={calculateTotalPerfectDays(stats, goals)}
-          />
-        </motion.div>
+        <AchievementsSection />
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-3">
