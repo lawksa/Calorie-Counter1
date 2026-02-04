@@ -4,6 +4,16 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+
+interface DaySummary {
+  calories: number;
+  calorieGoal: number;
+  water: number;
+  waterGoal: number;
+  mealsCount: number;
+  adherence: number;
+}
 
 interface DateSelectorProps {
   date: Date;
@@ -17,6 +27,20 @@ export function DateSelector({ date, onDateChange }: DateSelectorProps) {
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
   
   const isToday = isSameDay(date, new Date());
+
+  // Fetch weekly summary
+  const { data: weeklySummary } = useQuery<Record<string, DaySummary>>({
+    queryKey: ['/api/weekly-summary', format(weekStart, 'yyyy-MM-dd')],
+    staleTime: 30000,
+  });
+
+  const getAdherenceColor = (adherence: number, isSelected: boolean) => {
+    if (isSelected) return "bg-white";
+    if (adherence >= 80) return "bg-green-500";
+    if (adherence >= 50) return "bg-yellow-500";
+    if (adherence > 0) return "bg-orange-500";
+    return "bg-muted-foreground/30";
+  };
 
   return (
     <div className="space-y-4">
@@ -55,13 +79,17 @@ export function DateSelector({ date, onDateChange }: DateSelectorProps) {
         {weekDays.map((day, index) => {
           const isSelected = isSameDay(day, date);
           const isDayToday = isSameDay(day, new Date());
+          const dateKey = format(day, 'yyyy-MM-dd');
+          const daySummary = weeklySummary?.[dateKey];
+          const adherence = daySummary?.adherence || 0;
+          const hasData = daySummary && daySummary.mealsCount > 0;
           
           return (
             <motion.button
               key={day.toISOString()}
               onClick={() => onDateChange(day)}
               className={cn(
-                "flex-1 flex flex-col items-center py-3 rounded-2xl transition-all duration-300",
+                "flex-1 flex flex-col items-center py-3 rounded-2xl transition-all duration-300 relative",
                 isSelected 
                   ? "bg-gradient-to-br from-primary to-emerald-500 text-white shadow-lg shadow-primary/25" 
                   : "bg-card border hover:bg-muted/50"
@@ -69,7 +97,7 @@ export function DateSelector({ date, onDateChange }: DateSelectorProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
-              data-testid={`date-${format(day, "yyyy-MM-dd")}`}
+              data-testid={`date-${dateKey}`}
             >
               <span className={cn(
                 "text-xs font-medium mb-1",
@@ -83,12 +111,35 @@ export function DateSelector({ date, onDateChange }: DateSelectorProps) {
               )}>
                 {format(day, "d")}
               </span>
-              {isDayToday && (
-                <div className={cn(
-                  "w-1.5 h-1.5 rounded-full mt-1",
-                  isSelected ? "bg-white" : "bg-primary"
-                )} />
-              )}
+              
+              {/* Adherence indicator */}
+              <div className="flex gap-0.5 mt-1.5">
+                {hasData ? (
+                  <>
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      getAdherenceColor(adherence, isSelected)
+                    )} />
+                    {adherence >= 50 && (
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        getAdherenceColor(adherence, isSelected)
+                      )} />
+                    )}
+                    {adherence >= 80 && (
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        getAdherenceColor(adherence, isSelected)
+                      )} />
+                    )}
+                  </>
+                ) : isDayToday ? (
+                  <div className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    isSelected ? "bg-white" : "bg-primary"
+                  )} />
+                ) : null}
+              </div>
             </motion.button>
           );
         })}

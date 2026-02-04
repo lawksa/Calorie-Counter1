@@ -253,6 +253,82 @@ export async function registerRoutes(
     }
   });
 
+  // --- Weekly Summary for Calendar ---
+  app.get("/api/weekly-summary", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const dateQuery = req.query.date as string | undefined;
+    const centerDate = dateQuery ? new Date(dateQuery) : new Date();
+    
+    // Get week start (Saturday) and end (Friday)
+    const dayOfWeek = centerDate.getDay();
+    const daysFromSaturday = (dayOfWeek + 1) % 7;
+    const weekStart = new Date(centerDate);
+    weekStart.setDate(centerDate.getDate() - daysFromSaturday);
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+    
+    try {
+      const [mealsList, waterList, goal] = await Promise.all([
+        storage.getMealsDateRange(userId, weekStart, weekEnd),
+        storage.getWaterIntakeDateRange(userId, weekStart, weekEnd),
+        storage.getGoal(userId)
+      ]);
+      
+      const calorieGoal = goal?.calories || 2000;
+      const waterGoal = goal?.waterGlasses || 8;
+      
+      // Build daily summaries
+      const dailySummaries: Record<string, { 
+        calories: number; 
+        calorieGoal: number;
+        water: number;
+        waterGoal: number;
+        mealsCount: number;
+        adherence: number;
+      }> = {};
+      
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(weekStart);
+        day.setDate(weekStart.getDate() + i);
+        const dateKey = day.toISOString().split('T')[0];
+        
+        const dayMeals = mealsList.filter(m => 
+          m.date.toISOString().split('T')[0] === dateKey
+        );
+        const dayWater = waterList.find(w => 
+          w.date.toISOString().split('T')[0] === dateKey
+        );
+        
+        const totalCalories = dayMeals.reduce((sum, m) => sum + m.calories, 0);
+        const waterGlasses = dayWater?.glasses || 0;
+        
+        // Calculate adherence score (0-100)
+        // Within 10% of calorie goal = good, water goal met = good
+        const calorieAdherence = totalCalories > 0 
+          ? Math.max(0, 100 - Math.abs(totalCalories - calorieGoal) / calorieGoal * 100)
+          : 0;
+        const waterAdherence = Math.min(100, (waterGlasses / waterGoal) * 100);
+        const adherence = Math.round((calorieAdherence + waterAdherence) / 2);
+        
+        dailySummaries[dateKey] = {
+          calories: totalCalories,
+          calorieGoal,
+          water: waterGlasses,
+          waterGoal,
+          mealsCount: dayMeals.length,
+          adherence
+        };
+      }
+      
+      res.json(dailySummaries);
+    } catch (error) {
+      console.error("Weekly summary error:", error);
+      res.status(500).json({ message: "Failed to get weekly summary" });
+    }
+  });
+
   // --- Restaurants ---
   app.get(api.restaurants.list.path, requireAuth, async (req, res) => {
     const restaurantsList = await storage.getRestaurants();
