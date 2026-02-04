@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ interface AchievementStats {
 
 export default function Friends() {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [usernameInput, setUsernameInput] = useState("");
   const [addFriendUsername, setAddFriendUsername] = useState("");
@@ -511,7 +513,10 @@ export default function Friends() {
                                   <div className="flex items-center gap-2 mt-2">
                                     <div className="flex -space-x-2 space-x-reverse">
                                       {challenge.participants.slice(0, 4).map((p) => (
-                                        <Avatar key={p.userId} className="w-6 h-6 border-2 border-background">
+                                        <Avatar 
+                                          key={p.userId} 
+                                          className={`w-6 h-6 border-2 ${p.userId === currentUser?.id ? 'border-primary ring-1 ring-primary' : 'border-background'}`}
+                                        >
                                           <AvatarImage src={p.user.profileImageUrl || ''} />
                                           <AvatarFallback className="text-xs">{p.user.firstName?.[0]}</AvatarFallback>
                                         </Avatar>
@@ -521,6 +526,10 @@ export default function Friends() {
                                       {challenge.participants.length} مشاركين
                                     </span>
                                   </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    أنشأه: {challenge.creator.firstName} {challenge.creator.lastName}
+                                    {challenge.creator.username && ` (@${challenge.creator.username})`}
+                                  </p>
                                 </div>
                               </div>
                             </CardContent>
@@ -662,10 +671,17 @@ export default function Friends() {
               <div className="space-y-2">
                 {selectedChallenge.participants.map((p, index) => {
                   const progress = Math.min(100, (p.currentValue / selectedChallenge.targetValue) * 100);
+                  const isCurrentUser = p.userId === currentUser?.id;
                   return (
                     <div 
                       key={p.userId} 
-                      className={`flex items-center gap-3 p-3 rounded-xl ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800' : 'bg-muted/50'}`}
+                      className={`flex items-center gap-3 p-3 rounded-xl ${
+                        index === 0 
+                          ? 'bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800' 
+                          : isCurrentUser 
+                            ? 'bg-primary/10 border border-primary/30' 
+                            : 'bg-muted/50'
+                      }`}
                       data-testid={`leaderboard-item-${p.userId}`}
                     >
                       <div className="w-8 h-8 flex items-center justify-center">
@@ -679,12 +695,22 @@ export default function Friends() {
                           <span className="text-lg font-bold text-muted-foreground">{index + 1}</span>
                         )}
                       </div>
-                      <Avatar className="w-10 h-10">
+                      <Avatar className={`w-10 h-10 ${isCurrentUser ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
                         <AvatarImage src={p.user.profileImageUrl || ''} />
                         <AvatarFallback>{p.user.firstName?.[0]}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium">{p.user.firstName} {p.user.lastName}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">
+                            {p.user.firstName} {p.user.lastName}
+                          </p>
+                          {isCurrentUser && (
+                            <Badge variant="secondary" className="text-xs">أنت</Badge>
+                          )}
+                        </div>
+                        {p.user.username && (
+                          <p className="text-xs text-muted-foreground">@{p.user.username}</p>
+                        )}
                         <div className="w-full bg-muted rounded-full h-2 mt-1">
                           <div 
                             className="bg-primary h-2 rounded-full transition-all"
@@ -694,6 +720,9 @@ export default function Friends() {
                       </div>
                       <div className="text-left">
                         <p className="font-bold">{p.currentValue.toLocaleString('ar-SA')}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {Math.round(progress)}%
+                        </p>
                         {p.completed && (
                           <Badge variant="default" className="mt-1">
                             <Check className="w-3 h-3 me-1" />
