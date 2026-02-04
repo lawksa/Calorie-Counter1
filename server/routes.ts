@@ -75,6 +75,13 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: "No image provided" });
       }
 
+      // Validate image format
+      if (!image.startsWith('data:image/')) {
+        return res.status(400).json({ success: false, error: "Invalid image format" });
+      }
+
+      console.log("Analyzing meal image, size:", Math.round(image.length / 1024), "KB");
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
@@ -95,7 +102,10 @@ export async function registerRoutes(
             content: [
               {
                 type: "image_url",
-                image_url: { url: image }
+                image_url: { 
+                  url: image,
+                  detail: "low"
+                }
               },
               {
                 type: "text",
@@ -104,21 +114,32 @@ export async function registerRoutes(
             ]
           }
         ],
-        max_tokens: 500
+        max_completion_tokens: 500
       });
 
       const content = response.choices[0]?.message?.content || "";
+      console.log("AI response:", content);
       
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const meal = JSON.parse(jsonMatch[0]);
         res.json({ success: true, meal });
       } else {
-        res.json({ success: false, error: "Could not parse response" });
+        console.error("Could not parse JSON from response:", content);
+        res.json({ success: false, error: "تعذر تحليل الصورة، حاول مجدداً" });
       }
     } catch (error: any) {
-      console.error("Meal analysis error:", error);
-      res.json({ success: false, error: error.message || "Analysis failed" });
+      console.error("Meal analysis error:", error?.message || error);
+      console.error("Full error:", JSON.stringify(error, null, 2));
+      
+      // Check for specific error types
+      if (error?.status === 429) {
+        res.json({ success: false, error: "الخدمة مشغولة حالياً، حاول بعد قليل" });
+      } else if (error?.status === 400) {
+        res.json({ success: false, error: "صيغة الصورة غير مدعومة" });
+      } else {
+        res.json({ success: false, error: "فشل في تحليل الصورة، حاول مجدداً" });
+      }
     }
   });
 
