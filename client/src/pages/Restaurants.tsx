@@ -94,7 +94,9 @@ export default function Restaurants() {
       const res = await apiRequest('POST', '/api/restaurants', data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newRestaurant: Restaurant) => {
+      // Select the newly created restaurant to view it
+      setSelectedRestaurant(newRestaurant);
       queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
       setShowAddRestaurant(false);
       setNewRestaurant({ name: "", category: "custom" });
@@ -303,9 +305,13 @@ export default function Restaurants() {
                           variant="secondary"
                           size="sm"
                           className="gap-2"
+                          disabled={createRestaurantMutation.isPending}
                           onClick={() => {
-                            setNewRestaurant({ name: s.name, category: s.category || 'custom' });
-                            setShowAddRestaurant(true);
+                            // Automatically create the restaurant
+                            createRestaurantMutation.mutate({ 
+                              name: s.name, 
+                              category: s.category || 'custom' 
+                            });
                             clearAiSearch();
                           }}
                         >
