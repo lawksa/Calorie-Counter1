@@ -20,7 +20,9 @@ import {
   Salad,
   ChevronLeft,
   Star,
-  Building2
+  Building2,
+  Sparkles,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -65,6 +67,12 @@ const menuCategoryLabels: Record<string, string> = {
   desserts: "الحلويات",
 };
 
+interface AISearchResult {
+  restaurants: Restaurant[];
+  suggestions: { name: string; category: string }[];
+  query: string;
+}
+
 export default function Restaurants() {
   const [search, setSearch] = useState("");
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -73,6 +81,7 @@ export default function Restaurants() {
   const [showAddMenuItem, setShowAddMenuItem] = useState(false);
   const [newRestaurant, setNewRestaurant] = useState({ name: "", category: "custom" });
   const [newMenuItem, setNewMenuItem] = useState({ name: "", calories: "", protein: "", carbs: "", fats: "", category: "main" });
+  const [aiSearchResult, setAiSearchResult] = useState<AISearchResult | null>(null);
   
   const { data: restaurants, isLoading } = useRestaurants();
   const { data: menu, isLoading: menuLoading } = useRestaurantMenu(selectedRestaurant?.id || null);
@@ -81,8 +90,10 @@ export default function Restaurants() {
   const queryClient = useQueryClient();
 
   const createRestaurantMutation = useMutation({
-    mutationFn: (data: { name: string; category: string }) => 
-      apiRequest('/api/restaurants', { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: async (data: { name: string; category: string }) => {
+      const res = await apiRequest('POST', '/api/restaurants', data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
       setShowAddRestaurant(false);
@@ -92,16 +103,20 @@ export default function Restaurants() {
   });
 
   const toggleFavoriteMutation = useMutation({
-    mutationFn: (restaurantId: number) => 
-      apiRequest(`/api/restaurants/${restaurantId}/favorite`, { method: 'POST' }),
+    mutationFn: async (restaurantId: number) => {
+      const res = await apiRequest('POST', `/api/restaurants/${restaurantId}/favorite`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
     },
   });
 
   const createMenuItemMutation = useMutation({
-    mutationFn: (data: { restaurantId: number; name: string; calories: number; protein: number; carbs: number; fats: number; category: string }) => 
-      apiRequest(`/api/restaurants/${data.restaurantId}/menu`, { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: async (data: { restaurantId: number; name: string; calories: number; protein: number; carbs: number; fats: number; category: string }) => {
+      const res = await apiRequest('POST', `/api/restaurants/${data.restaurantId}/menu`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/restaurants', selectedRestaurant?.id, 'menu'] });
       setShowAddMenuItem(false);
@@ -110,11 +125,35 @@ export default function Restaurants() {
     },
   });
 
+  const aiSearchMutation = useMutation({
+    mutationFn: async (query: string): Promise<AISearchResult> => {
+      const res = await apiRequest('POST', '/api/restaurants/ai-search', { query });
+      return res.json();
+    },
+    onSuccess: (data: AISearchResult) => {
+      setAiSearchResult(data);
+    },
+    onError: () => {
+      toast({ title: "فشل في البحث الذكي", variant: "destructive" });
+    },
+  });
+
+  const handleAiSearch = () => {
+    if (search.trim()) {
+      aiSearchMutation.mutate(search);
+    }
+  };
+
+  const clearAiSearch = () => {
+    setAiSearchResult(null);
+    setSearch("");
+  };
+
   const filteredRestaurants = restaurants?.filter(r => 
     r.nameAr.includes(search) || r.name.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
-  const categories = [...new Set(restaurants?.map(r => r.category) || [])];
+  const categories = Array.from(new Set(restaurants?.map(r => r.category) || []));
 
   const displayedRestaurants = selectedCategory 
     ? filteredRestaurants.filter(r => r.category === selectedCategory)
@@ -181,16 +220,112 @@ export default function Restaurants() {
         </div>
 
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="ابحث عن مطعم..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pr-10 h-12 rounded-xl"
-            data-testid="search-restaurants"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="ابحث عن مطعم أو نوع طعام..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                if (!e.target.value) setAiSearchResult(null);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleAiSearch()}
+              className="pr-10 h-12 rounded-xl"
+              data-testid="search-restaurants"
+            />
+          </div>
+          <Button
+            variant="default"
+            size="icon"
+            className="h-12 w-12 shrink-0 bg-gradient-to-r from-purple-500 to-pink-500"
+            onClick={handleAiSearch}
+            disabled={!search.trim() || aiSearchMutation.isPending}
+            data-testid="button-ai-search"
+          >
+            {aiSearchMutation.isPending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Sparkles className="w-5 h-5" />
+            )}
+          </Button>
         </div>
+
+        {/* AI Search Results */}
+        <AnimatePresence>
+          {aiSearchResult && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <Card className="p-4 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    <span className="font-bold text-purple-700 dark:text-purple-300">نتائج البحث الذكي</span>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={clearAiSearch}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                {aiSearchResult.restaurants.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    <p className="text-sm text-muted-foreground">مطاعم مناسبة:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {aiSearchResult.restaurants.map((r) => (
+                        <Button
+                          key={r.id}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => {
+                            setSelectedRestaurant(r);
+                            clearAiSearch();
+                          }}
+                        >
+                          {r.nameAr}
+                          <ChevronLeft className="w-3 h-3" />
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {aiSearchResult.suggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">اقتراحات لإضافة:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {aiSearchResult.suggestions.map((s, i) => (
+                        <Button
+                          key={i}
+                          variant="secondary"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => {
+                            setNewRestaurant({ name: s.name, category: s.category || 'custom' });
+                            setShowAddRestaurant(true);
+                            clearAiSearch();
+                          }}
+                        >
+                          <Plus className="w-3 h-3" />
+                          {s.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {aiSearchResult.restaurants.length === 0 && aiSearchResult.suggestions.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    لم يتم العثور على نتائج
+                  </p>
+                )}
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Category Filter */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">

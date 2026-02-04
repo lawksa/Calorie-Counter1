@@ -438,6 +438,70 @@ export async function registerRoutes(
     res.json(menu);
   });
 
+  // AI Restaurant Search
+  app.post("/api/restaurants/ai-search", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { query } = req.body;
+      if (!query) {
+        return res.status(400).json({ message: "الرجاء إدخال استفسار" });
+      }
+
+      // Get all restaurants for context
+      const allRestaurants = await storage.getRestaurants(userId);
+      const restaurantNames = allRestaurants.map(r => `${r.nameAr} (${r.name}) - ${r.category}`).join('\n');
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `أنت مساعد للبحث عن المطاعم في السعودية. لديك قائمة بالمطاعم المتاحة:
+
+${restaurantNames}
+
+عندما يسأل المستخدم عن مطعم أو نوع طعام:
+1. ابحث في القائمة عن المطاعم المناسبة
+2. إذا وجدت مطاعم مناسبة، أرجع أسماءها بالضبط كما هي في القائمة
+3. إذا لم تجد، اقترح اسم مطعم جديد يمكن إضافته
+
+أرجع الإجابة بصيغة JSON فقط:
+{
+  "found": [{"name": "اسم المطعم بالضبط", "reason": "سبب الاقتراح"}],
+  "suggestions": [{"name": "اسم مطعم جديد", "category": "fast_food|saudi|coffee|healthy|custom"}]
+}`
+          },
+          {
+            role: "user",
+            content: query
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 500,
+      });
+
+      const content = response.choices[0]?.message?.content || '{"found":[],"suggestions":[]}';
+      const result = JSON.parse(content);
+
+      // Match found restaurants with actual restaurant data
+      const matchedRestaurants = allRestaurants.filter(r => 
+        result.found?.some((f: any) => 
+          r.nameAr.includes(f.name) || r.name.toLowerCase().includes(f.name.toLowerCase()) ||
+          f.name.includes(r.nameAr) || f.name.toLowerCase().includes(r.name.toLowerCase())
+        )
+      );
+
+      res.json({
+        restaurants: matchedRestaurants,
+        suggestions: result.suggestions || [],
+        query
+      });
+    } catch (err) {
+      console.error("AI restaurant search error:", err);
+      res.status(500).json({ message: "فشل في البحث" });
+    }
+  });
+
   // Create custom restaurant
   app.post("/api/restaurants", requireAuth, async (req, res) => {
     const userId = (req.user as any).claims.sub;
