@@ -121,8 +121,14 @@ function WeeklyAdherenceCard() {
   const weekEnd = endOfWeek(today, { weekStartsOn: 6 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
+  const weekStartStr = format(weekStart, 'yyyy-MM-dd');
   const { data: weeklySummary } = useQuery<Record<string, DaySummary>>({
-    queryKey: ['/api/weekly-summary', format(weekStart, 'yyyy-MM-dd')],
+    queryKey: ['/api/weekly-summary', weekStartStr],
+    queryFn: async () => {
+      const res = await fetch(`/api/weekly-summary?date=${weekStartStr}`);
+      if (!res.ok) throw new Error('Failed to fetch weekly summary');
+      return res.json();
+    },
     staleTime: 30000,
   });
 

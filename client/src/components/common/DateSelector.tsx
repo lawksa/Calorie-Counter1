@@ -29,8 +29,14 @@ export function DateSelector({ date, onDateChange }: DateSelectorProps) {
   const isToday = isSameDay(date, new Date());
 
   // Fetch weekly summary
+  const weekStartStr = format(weekStart, 'yyyy-MM-dd');
   const { data: weeklySummary } = useQuery<Record<string, DaySummary>>({
-    queryKey: ['/api/weekly-summary', format(weekStart, 'yyyy-MM-dd')],
+    queryKey: ['/api/weekly-summary', weekStartStr],
+    queryFn: async () => {
+      const res = await fetch(`/api/weekly-summary?date=${weekStartStr}`);
+      if (!res.ok) throw new Error('Failed to fetch weekly summary');
+      return res.json();
+    },
     staleTime: 30000,
   });
 
