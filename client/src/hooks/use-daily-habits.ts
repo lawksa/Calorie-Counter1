@@ -27,6 +27,8 @@ export function useUpdateDailyHabit() {
           return Array.isArray(query.queryKey) && query.queryKey[0] === "/api/daily-habits";
         }
       });
+      // Also invalidate challenges progress since vegetables are tracked from daily habits
+      queryClient.invalidateQueries({ queryKey: ["/api/challenges/progress"] });
     },
   });
 }
