@@ -3,7 +3,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ScanBarcode, Pencil, Bookmark, Check } from "lucide-react";
+import { Loader2, ScanBarcode, Pencil, Bookmark, Check, Sun, CloudSun, Moon, Cookie } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,15 @@ interface BarcodeScannerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+type MealCategory = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+const mealCategories: { key: MealCategory; label: string; icon: any; gradient: string }[] = [
+  { key: 'breakfast', label: 'الفطور', icon: Sun, gradient: 'from-amber-400 to-orange-500' },
+  { key: 'lunch', label: 'الغداء', icon: CloudSun, gradient: 'from-orange-500 to-red-500' },
+  { key: 'dinner', label: 'العشاء', icon: Moon, gradient: 'from-purple-500 to-violet-600' },
+  { key: 'snack', label: 'وجبات خفيفة', icon: Cookie, gradient: 'from-cyan-400 to-blue-500' },
+];
 
 interface ProductInfo {
   name: string;
@@ -38,6 +47,7 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
   const [scannerReady, setScannerReady] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProduct, setEditedProduct] = useState<ProductInfo | null>(null);
+  const [selectedMealType, setSelectedMealType] = useState<MealCategory>("lunch");
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const { toast } = useToast();
   const createMeal = useCreateMeal();
@@ -196,16 +206,18 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
     if (!currentProduct) return;
 
     try {
+      const mealTypeLabel = mealCategories.find(c => c.key === selectedMealType)?.label || "";
       await createMeal.mutateAsync({
         name: currentProduct.name,
         calories: currentProduct.calories,
         protein: currentProduct.protein,
         carbs: currentProduct.carbs,
         fats: currentProduct.fats,
+        mealType: selectedMealType,
       });
       toast({
         title: "تمت الإضافة",
-        description: `تم إضافة ${currentProduct.name} إلى وجباتك`,
+        description: `تم إضافة ${currentProduct.name} في ${mealTypeLabel}`,
       });
       handleClose();
     } catch (error) {
@@ -228,6 +240,7 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
     setEditedProduct(null);
     setScannerReady(false);
     setIsEditing(false);
+    setSelectedMealType("lunch");
     onOpenChange(false);
   };
 
@@ -373,6 +386,33 @@ export function BarcodeScanner({ open, onOpenChange }: BarcodeScannerProps) {
                     <div className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-3 text-center">
                       <p className="text-2xl font-bold text-purple-600">{currentProduct?.fats}g</p>
                       <p className="text-xs text-muted-foreground">دهون</p>
+                    </div>
+                  </div>
+
+                  {/* Meal Type Selector */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-center">اختر نوع الوجبة</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {mealCategories.map((type) => {
+                        const Icon = type.icon;
+                        const isSelected = selectedMealType === type.key;
+                        return (
+                          <button
+                            key={type.key}
+                            type="button"
+                            onClick={() => setSelectedMealType(type.key)}
+                            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
+                              isSelected 
+                                ? `bg-gradient-to-br ${type.gradient} text-white shadow-lg scale-105` 
+                                : "bg-muted hover:bg-muted/80"
+                            }`}
+                            data-testid={`button-barcode-meal-type-${type.key}`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span className="text-xs font-medium">{type.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

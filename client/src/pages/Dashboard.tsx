@@ -81,6 +81,7 @@ export default function Dashboard() {
   const [isEditingAnalysis, setIsEditingAnalysis] = useState(false);
   const [editedAnalysis, setEditedAnalysis] = useState<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [cameraMealType, setCameraMealType] = useState<MealCategory>("lunch");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { data: meals, isLoading: mealsLoading } = useMeals(date);
@@ -173,21 +174,24 @@ export default function Dashboard() {
     if (!currentAnalysis) return;
 
     try {
+      const mealTypeLabel = mealCategories.find(c => c.key === cameraMealType)?.labelAr || "";
       await createMeal.mutateAsync({
         name: currentAnalysis.name,
         calories: currentAnalysis.calories,
         protein: currentAnalysis.protein,
         carbs: currentAnalysis.carbs,
         fats: currentAnalysis.fats,
+        mealType: cameraMealType,
       });
       toast({
         title: "تمت الإضافة",
-        description: `تم إضافة ${currentAnalysis.name} إلى وجباتك`,
+        description: `تم إضافة ${currentAnalysis.name} في ${mealTypeLabel}`,
       });
       setShowResultDialog(false);
       setAnalysisResult(null);
       setEditedAnalysis(null);
       setIsEditingAnalysis(false);
+      setCameraMealType("lunch");
     } catch (error) {
       toast({
         title: "خطأ",
@@ -686,6 +690,33 @@ export default function Dashboard() {
                     </div>
                   </div>
                   
+                  {/* Meal Type Selector */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-center">اختر نوع الوجبة</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {mealCategories.map((type) => {
+                        const Icon = type.icon;
+                        const isSelected = cameraMealType === type.key;
+                        return (
+                          <button
+                            key={type.key}
+                            type="button"
+                            onClick={() => setCameraMealType(type.key)}
+                            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
+                              isSelected 
+                                ? `bg-gradient-to-br ${type.gradient} text-white shadow-lg scale-105` 
+                                : "bg-muted hover:bg-muted/80"
+                            }`}
+                            data-testid={`button-camera-meal-type-${type.key}`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span className="text-xs font-medium">{type.labelAr}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
