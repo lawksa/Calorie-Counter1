@@ -48,10 +48,12 @@ export const waterIntake = pgTable("water_intake", {
 // Saudi Restaurants
 export const restaurants = pgTable("restaurants", {
   id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id), // null = system restaurant, set = user's custom restaurant
   name: text("name").notNull(),
   nameAr: text("name_ar").notNull(),
   logo: text("logo"),
   category: text("category").notNull(), // fast_food, saudi, coffee, healthy, etc.
+  isFavorite: boolean("is_favorite").default(false),
 });
 
 // Restaurant Menu Items

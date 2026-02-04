@@ -5,6 +5,7 @@ import { useCreateMeal } from "@/hooks/use-meals";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Loader2, 
   Search, 
@@ -17,11 +18,15 @@ import {
   UtensilsCrossed,
   Coffee,
   Salad,
-  ChevronLeft
+  ChevronLeft,
+  Star,
+  Building2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import type { Restaurant, MenuItem } from "@shared/schema";
 import {
   Dialog,
@@ -29,12 +34,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const categoryIcons: Record<string, any> = {
   fast_food: UtensilsCrossed,
   saudi: Flame,
   coffee: Coffee,
   healthy: Salad,
+  custom: Building2,
 };
 
 const categoryLabels: Record<string, string> = {
@@ -42,6 +55,7 @@ const categoryLabels: Record<string, string> = {
   saudi: "مطاعم سعودية",
   coffee: "مقاهي",
   healthy: "أكل صحي",
+  custom: "مطاعمي",
 };
 
 const menuCategoryLabels: Record<string, string> = {
@@ -55,10 +69,46 @@ export default function Restaurants() {
   const [search, setSearch] = useState("");
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showAddRestaurant, setShowAddRestaurant] = useState(false);
+  const [showAddMenuItem, setShowAddMenuItem] = useState(false);
+  const [newRestaurant, setNewRestaurant] = useState({ name: "", category: "custom" });
+  const [newMenuItem, setNewMenuItem] = useState({ name: "", calories: "", protein: "", carbs: "", fats: "", category: "main" });
+  
   const { data: restaurants, isLoading } = useRestaurants();
   const { data: menu, isLoading: menuLoading } = useRestaurantMenu(selectedRestaurant?.id || null);
   const createMeal = useCreateMeal();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const createRestaurantMutation = useMutation({
+    mutationFn: (data: { name: string; category: string }) => 
+      apiRequest('/api/restaurants', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+      setShowAddRestaurant(false);
+      setNewRestaurant({ name: "", category: "custom" });
+      toast({ title: "تم إضافة المطعم بنجاح" });
+    },
+  });
+
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: (restaurantId: number) => 
+      apiRequest(`/api/restaurants/${restaurantId}/favorite`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+    },
+  });
+
+  const createMenuItemMutation = useMutation({
+    mutationFn: (data: { restaurantId: number; name: string; calories: number; protein: number; carbs: number; fats: number; category: string }) => 
+      apiRequest(`/api/restaurants/${data.restaurantId}/menu`, { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurants', selectedRestaurant?.id, 'menu'] });
+      setShowAddMenuItem(false);
+      setNewMenuItem({ name: "", calories: "", protein: "", carbs: "", fats: "", category: "main" });
+      toast({ title: "تم إضافة الوجبة بنجاح" });
+    },
+  });
 
   const filteredRestaurants = restaurants?.filter(r => 
     r.nameAr.includes(search) || r.name.toLowerCase().includes(search.toLowerCase())
@@ -113,9 +163,21 @@ export default function Restaurants() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">مطاعم السعودية</h1>
-          <p className="text-muted-foreground">اختر من قوائم المطاعم المفضلة</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">مطاعم السعودية</h1>
+            <p className="text-muted-foreground">اختر من قوائم المطاعم المفضلة</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setShowAddRestaurant(true)}
+            data-testid="button-add-restaurant"
+          >
+            <Plus className="w-4 h-4" />
+            أضف مطعم
+          </Button>
         </div>
 
         {/* Search */}
@@ -180,6 +242,7 @@ export default function Restaurants() {
                       restaurant.category === 'saudi' && "bg-gradient-to-br from-amber-500 to-orange-500",
                       restaurant.category === 'coffee' && "bg-gradient-to-br from-amber-700 to-amber-900",
                       restaurant.category === 'healthy' && "bg-gradient-to-br from-green-500 to-emerald-500",
+                      restaurant.category === 'custom' && "bg-gradient-to-br from-blue-500 to-indigo-500",
                     )}>
                       <Icon className="w-7 h-7" />
                     </div>
@@ -188,6 +251,22 @@ export default function Restaurants() {
                       <h3 className="font-bold text-lg">{restaurant.nameAr}</h3>
                       <p className="text-sm text-muted-foreground">{restaurant.name}</p>
                     </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavoriteMutation.mutate(restaurant.id);
+                      }}
+                      data-testid={`favorite-${restaurant.id}`}
+                    >
+                      <Star className={cn(
+                        "w-5 h-5",
+                        restaurant.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
+                      )} />
+                    </Button>
                     
                     <ChevronLeft className="w-5 h-5 text-muted-foreground" />
                   </div>
@@ -217,10 +296,20 @@ export default function Restaurants() {
                 >
                   <ArrowRight className="w-5 h-5" />
                 </Button>
-                <div>
+                <div className="flex-1">
                   <DialogTitle className="text-xl font-bold">{selectedRestaurant?.nameAr}</DialogTitle>
                   <p className="text-sm text-muted-foreground">{selectedRestaurant?.name}</p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => setShowAddMenuItem(true)}
+                  data-testid="button-add-menu-item"
+                >
+                  <Plus className="w-4 h-4" />
+                  وجبة
+                </Button>
               </div>
             </DialogHeader>
 
@@ -288,6 +377,157 @@ export default function Restaurants() {
                   ))}
                 </div>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Restaurant Dialog */}
+        <Dialog open={showAddRestaurant} onOpenChange={setShowAddRestaurant}>
+          <DialogContent className="sm:max-w-[400px]" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>إضافة مطعم جديد</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>اسم المطعم</Label>
+                <Input
+                  placeholder="مثال: مطعمي المفضل"
+                  value={newRestaurant.name}
+                  onChange={(e) => setNewRestaurant({ ...newRestaurant, name: e.target.value })}
+                  data-testid="input-restaurant-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>الفئة</Label>
+                <Select
+                  value={newRestaurant.category}
+                  onValueChange={(val) => setNewRestaurant({ ...newRestaurant, category: val })}
+                >
+                  <SelectTrigger data-testid="select-restaurant-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="custom">مطاعمي</SelectItem>
+                    <SelectItem value="fast_food">وجبات سريعة</SelectItem>
+                    <SelectItem value="saudi">مطاعم سعودية</SelectItem>
+                    <SelectItem value="coffee">مقاهي</SelectItem>
+                    <SelectItem value="healthy">أكل صحي</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => createRestaurantMutation.mutate(newRestaurant)}
+                disabled={!newRestaurant.name || createRestaurantMutation.isPending}
+                data-testid="button-save-restaurant"
+              >
+                {createRestaurantMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                ) : null}
+                حفظ المطعم
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Menu Item Dialog */}
+        <Dialog open={showAddMenuItem} onOpenChange={setShowAddMenuItem}>
+          <DialogContent className="sm:max-w-[400px]" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>إضافة وجبة جديدة</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>اسم الوجبة</Label>
+                <Input
+                  placeholder="مثال: برجر لحم"
+                  value={newMenuItem.name}
+                  onChange={(e) => setNewMenuItem({ ...newMenuItem, name: e.target.value })}
+                  data-testid="input-menu-item-name"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>السعرات</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={newMenuItem.calories}
+                    onChange={(e) => setNewMenuItem({ ...newMenuItem, calories: e.target.value })}
+                    data-testid="input-menu-item-calories"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>البروتين (غ)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={newMenuItem.protein}
+                    onChange={(e) => setNewMenuItem({ ...newMenuItem, protein: e.target.value })}
+                    data-testid="input-menu-item-protein"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الكربوهيدرات (غ)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={newMenuItem.carbs}
+                    onChange={(e) => setNewMenuItem({ ...newMenuItem, carbs: e.target.value })}
+                    data-testid="input-menu-item-carbs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الدهون (غ)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={newMenuItem.fats}
+                    onChange={(e) => setNewMenuItem({ ...newMenuItem, fats: e.target.value })}
+                    data-testid="input-menu-item-fats"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>فئة الوجبة</Label>
+                <Select
+                  value={newMenuItem.category}
+                  onValueChange={(val) => setNewMenuItem({ ...newMenuItem, category: val })}
+                >
+                  <SelectTrigger data-testid="select-menu-item-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="main">الأطباق الرئيسية</SelectItem>
+                    <SelectItem value="sides">الإضافات</SelectItem>
+                    <SelectItem value="drinks">المشروبات</SelectItem>
+                    <SelectItem value="desserts">الحلويات</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  if (selectedRestaurant) {
+                    createMenuItemMutation.mutate({
+                      restaurantId: selectedRestaurant.id,
+                      name: newMenuItem.name,
+                      calories: parseInt(newMenuItem.calories) || 0,
+                      protein: parseInt(newMenuItem.protein) || 0,
+                      carbs: parseInt(newMenuItem.carbs) || 0,
+                      fats: parseInt(newMenuItem.fats) || 0,
+                      category: newMenuItem.category,
+                    });
+                  }
+                }}
+                disabled={!newMenuItem.name || !newMenuItem.calories || createMenuItemMutation.isPending}
+                data-testid="button-save-menu-item"
+              >
+                {createMenuItemMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                ) : null}
+                حفظ الوجبة
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

@@ -12,7 +12,7 @@ import {
   type FriendChallengeParticipant, type InsertFriendChallengeParticipant
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lt, desc, sql, or, ne } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql, or, ne, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Auth
@@ -36,8 +36,11 @@ export interface IStorage {
   updateWaterIntake(userId: string, glasses: number, date: Date): Promise<WaterIntake>;
 
   // Restaurants
-  getRestaurants(): Promise<Restaurant[]>;
+  getRestaurants(userId: string): Promise<Restaurant[]>;
+  createRestaurant(userId: string, data: { name: string; nameAr: string; category: string; logo: string | null }): Promise<Restaurant>;
+  toggleRestaurantFavorite(restaurantId: number, userId: string): Promise<Restaurant | null>;
   getMenuItems(restaurantId: number): Promise<MenuItem[]>;
+  createMenuItem(data: { restaurantId: number; name: string; nameAr: string; calories: number; protein: number; carbs: number; fats: number; category: string }): Promise<MenuItem>;
 
   // Weight
   getWeightLogs(userId: string, limit?: number): Promise<WeightLog[]>;
@@ -214,8 +217,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Restaurants
-  async getRestaurants(): Promise<Restaurant[]> {
-    return db.select().from(restaurants).orderBy(restaurants.name);
+  async getRestaurants(userId: string): Promise<Restaurant[]> {
+    // Get system restaurants and user's custom restaurants
+    return db.select().from(restaurants)
+      .where(or(
+        isNull(restaurants.userId),
+        eq(restaurants.userId, userId)
+      ))
+      .orderBy(desc(restaurants.isFavorite), restaurants.name);
+  }
+
+  async createRestaurant(userId: string, data: { name: string; nameAr: string; category: string; logo: string | null }): Promise<Restaurant> {
+    const [restaurant] = await db.insert(restaurants).values({
+      userId,
+      name: data.name,
+      nameAr: data.nameAr,
+      category: data.category,
+      logo: data.logo,
+      isFavorite: false,
+    }).returning();
+    return restaurant;
+  }
+
+  async toggleRestaurantFavorite(restaurantId: number, userId: string): Promise<Restaurant | null> {
+    const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, restaurantId));
+    if (!restaurant) return null;
+    
+    const [updated] = await db.update(restaurants)
+      .set({ isFavorite: !restaurant.isFavorite })
+      .where(eq(restaurants.id, restaurantId))
+      .returning();
+    return updated;
   }
 
   async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
@@ -224,6 +256,11 @@ export class DatabaseStorage implements IStorage {
       .from(menuItems)
       .where(eq(menuItems.restaurantId, restaurantId))
       .orderBy(menuItems.category, menuItems.name);
+  }
+
+  async createMenuItem(data: { restaurantId: number; name: string; nameAr: string; calories: number; protein: number; carbs: number; fats: number; category: string }): Promise<MenuItem> {
+    const [menuItem] = await db.insert(menuItems).values(data).returning();
+    return menuItem;
   }
 
   // Date range for meals (for statistics)

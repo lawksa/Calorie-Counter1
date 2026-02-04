@@ -427,7 +427,8 @@ export async function registerRoutes(
 
   // --- Restaurants ---
   app.get(api.restaurants.list.path, requireAuth, async (req, res) => {
-    const restaurantsList = await storage.getRestaurants();
+    const userId = (req.user as any).claims.sub;
+    const restaurantsList = await storage.getRestaurants(userId);
     res.json(restaurantsList);
   });
 
@@ -435,6 +436,65 @@ export async function registerRoutes(
     const restaurantId = parseInt(req.params.id);
     const menu = await storage.getMenuItems(restaurantId);
     res.json(menu);
+  });
+
+  // Create custom restaurant
+  app.post("/api/restaurants", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { name, category } = req.body;
+      if (!name || !category) {
+        return res.status(400).json({ message: "الاسم والفئة مطلوبان" });
+      }
+      const restaurant = await storage.createRestaurant(userId, {
+        name,
+        nameAr: name,
+        category,
+        logo: null,
+      });
+      res.json(restaurant);
+    } catch (err) {
+      console.error("Create restaurant error:", err);
+      res.status(500).json({ message: "فشل في إنشاء المطعم" });
+    }
+  });
+
+  // Toggle restaurant favorite
+  app.post("/api/restaurants/:id/favorite", requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const restaurantId = parseInt(req.params.id);
+    try {
+      const restaurant = await storage.toggleRestaurantFavorite(restaurantId, userId);
+      res.json(restaurant);
+    } catch (err) {
+      console.error("Toggle favorite error:", err);
+      res.status(500).json({ message: "فشل في تحديث المفضلة" });
+    }
+  });
+
+  // Add menu item to restaurant
+  app.post("/api/restaurants/:id/menu", requireAuth, async (req, res) => {
+    const restaurantId = parseInt(req.params.id);
+    try {
+      const { name, calories, protein, carbs, fats, category } = req.body;
+      if (!name || calories === undefined) {
+        return res.status(400).json({ message: "الاسم والسعرات مطلوبان" });
+      }
+      const menuItem = await storage.createMenuItem({
+        restaurantId,
+        name,
+        nameAr: name,
+        calories: parseInt(calories) || 0,
+        protein: parseInt(protein) || 0,
+        carbs: parseInt(carbs) || 0,
+        fats: parseInt(fats) || 0,
+        category: category || "main",
+      });
+      res.json(menuItem);
+    } catch (err) {
+      console.error("Create menu item error:", err);
+      res.status(500).json({ message: "فشل في إضافة الوجبة" });
+    }
   });
 
   // --- AI Estimate ---
