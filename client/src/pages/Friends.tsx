@@ -85,14 +85,18 @@ export default function Friends() {
     queryKey: ['/api/friend-challenges']
   });
 
-  const { data: searchResults = [] } = useQuery<User[]>({
+  const { data: searchResults = [], isError: searchError, isLoading: searchLoading } = useQuery<User[]>({
     queryKey: ['/api/users/search', searchQuery],
     queryFn: async () => {
       const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Search failed');
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('يرجى تسجيل الدخول');
+        throw new Error('فشل في البحث');
+      }
       return res.json();
     },
-    enabled: searchQuery.length >= 2
+    enabled: searchQuery.length >= 2,
+    retry: false
   });
 
   const updateUsernameMutation = useMutation({
@@ -110,7 +114,8 @@ export default function Friends() {
 
   const sendFriendRequestMutation = useMutation({
     mutationFn: async (username: string) => {
-      return apiRequest('POST', '/api/friends/request', { username });
+      const res = await apiRequest('POST', '/api/friends/request', { username });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/friends'] });
@@ -118,7 +123,16 @@ export default function Friends() {
       toast({ title: "تم إرسال طلب الصداقة" });
     },
     onError: (err: any) => {
-      toast({ title: "خطأ", description: err.message, variant: "destructive" });
+      let message = "فشل في إرسال الطلب";
+      const errStr = err.message || "";
+      if (errStr.includes("404") || errStr.includes("not found") || errStr.includes("غير موجود")) {
+        message = "المستخدم غير موجود";
+      } else if (errStr.includes("401") || errStr.includes("Unauthorized")) {
+        message = "يرجى تسجيل الدخول";
+      } else if (errStr.includes("already exists") || errStr.includes("موجود بالفعل")) {
+        message = "طلب الصداقة موجود بالفعل";
+      }
+      toast({ title: "خطأ", description: message, variant: "destructive" });
     }
   });
 
@@ -145,7 +159,8 @@ export default function Friends() {
 
   const createChallengeMutation = useMutation({
     mutationFn: async (data: typeof newChallenge) => {
-      return apiRequest('POST', '/api/friend-challenges', data);
+      const res = await apiRequest('POST', '/api/friend-challenges', data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/friend-challenges'] });
@@ -162,7 +177,14 @@ export default function Friends() {
       toast({ title: "تم إنشاء التحدي بنجاح" });
     },
     onError: (err: any) => {
-      toast({ title: "خطأ", description: err.message, variant: "destructive" });
+      let message = "فشل في إنشاء التحدي";
+      const errStr = err.message || "";
+      if (errStr.includes("401") || errStr.includes("Unauthorized")) {
+        message = "يرجى تسجيل الدخول";
+      } else if (errStr.includes("400")) {
+        message = "جميع الحقول مطلوبة";
+      }
+      toast({ title: "خطأ", description: message, variant: "destructive" });
     }
   });
 
