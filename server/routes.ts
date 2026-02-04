@@ -558,17 +558,19 @@ export async function registerRoutes(
     const today = new Date();
     
     // Get all data needed to calculate progress
-    const [challengesList, goal, meals, water, exercises] = await Promise.all([
+    const [challengesList, goal, meals, water, exercises, dailyHabits] = await Promise.all([
       storage.getChallenges(),
       storage.getGoal(userId),
       storage.getMeals(userId, today),
       storage.getWaterIntake(userId, today),
       storage.getExercises(userId, today),
+      storage.getDailyHabit(userId, today),
     ]);
     
     const calorieGoal = goal?.calories || 2000;
     const proteinGoal = goal?.protein || 150;
     const waterGoal = goal?.waterGlasses || 8;
+    const vegetablesServings = dailyHabits?.vegetablesServings || 0;
     
     // Calculate actual values
     const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
@@ -613,8 +615,12 @@ export async function registerRoutes(
           completed = currentValue >= challenge.targetValue;
           break;
         case 'vegetables':
+          // Track vegetables from daily habits
+          currentValue = vegetablesServings;
+          completed = currentValue >= challenge.targetValue;
+          break;
         case 'no_sugar':
-          // These need manual tracking - keep at 0 unless manually set
+          // This needs manual tracking - keep at 0 unless manually set
           currentValue = 0;
           completed = false;
           break;

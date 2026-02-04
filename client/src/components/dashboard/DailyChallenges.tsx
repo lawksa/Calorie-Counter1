@@ -47,8 +47,8 @@ export function DailyChallenges() {
   const totalPoints = userProgress?.filter(p => p.completed).reduce((sum, p) => sum + (p.challenge?.points || 0), 0) || 0;
 
   const handleManualToggle = async (challengeId: number, challenge: any, isCompleted: boolean) => {
-    // Only allow manual toggle for vegetables and no_sugar challenges
-    if (challenge.type !== 'vegetables' && challenge.type !== 'no_sugar') return;
+    // Only allow manual toggle for no_sugar challenge
+    if (challenge.type !== 'no_sugar') return;
     
     await updateProgress.mutateAsync({
       challengeId,
@@ -61,23 +61,25 @@ export function DailyChallenges() {
     const challenge = progress.challenge;
     if (!challenge) return "";
     
+    const percent = getProgressPercent(progress);
+    
     switch (challenge.type) {
       case 'water':
-        return `${progress.currentValue}/${challenge.targetValue} أكواب`;
+        return `${Math.round(percent)}% (${progress.currentValue}/${challenge.targetValue})`;
       case 'calories':
-        return progress.completed ? "تم الالتزام" : "لم يتم بعد";
+        return progress.completed ? "100% ✓" : `${Math.round(percent)}%`;
       case 'protein':
-        return progress.completed ? "تم التحقيق" : "لم يتم بعد";
+        return progress.completed ? "100% ✓" : `${Math.round(percent)}%`;
       case 'meals':
-        return `${progress.currentValue}/${challenge.targetValue} وجبات`;
+        return `${Math.round(percent)}% (${progress.currentValue}/${challenge.targetValue})`;
       case 'exercise':
-        return `${progress.currentValue}/${challenge.targetValue} دقيقة`;
+        return `${Math.round(percent)}% (${progress.currentValue}/${challenge.targetValue} د)`;
       case 'exercise_calories':
-        return `${progress.currentValue}/${challenge.targetValue} سعرة`;
+        return `${Math.round(percent)}% (${progress.currentValue}/${challenge.targetValue})`;
       case 'vegetables':
-        return progress.completed ? "تم" : "اضغط للتأكيد";
+        return `${Math.round(percent)}% (${progress.currentValue}/${challenge.targetValue})`;
       case 'no_sugar':
-        return progress.completed ? "تم" : "اضغط للتأكيد";
+        return progress.completed ? "100% ✓" : "اضغط للتأكيد";
       default:
         return "";
     }
@@ -111,7 +113,7 @@ export function DailyChallenges() {
           
           const isCompleted = progress.completed;
           const Icon = iconMap[challenge.icon || 'target'] || Target;
-          const isManualChallenge = challenge.type === 'vegetables' || challenge.type === 'no_sugar';
+          const isManualChallenge = challenge.type === 'no_sugar'; // Only no_sugar is manual now
           const progressPercent = getProgressPercent(progress);
 
           return (
