@@ -59,7 +59,7 @@ export function HabitsTracker() {
           const value = (habit as any)?.[item.key] || 0;
           const displayValue = item.isMinutes ? Math.round(value / 60 * 10) / 10 : value;
           const progress = Math.min(100, (value / item.target) * 100);
-          const increment = item.key === 'steps' ? 1000 : item.isMinutes ? 60 : 1;
+          const increment = item.isMinutes ? 60 : 1;
           
           return (
             <motion.div
