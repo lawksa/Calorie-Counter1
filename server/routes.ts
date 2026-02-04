@@ -459,7 +459,80 @@ export async function registerRoutes(
 
   app.get(api.challenges.userProgress.path, requireAuth, async (req, res) => {
     const userId = (req.user as any).claims.sub;
-    const progress = await storage.getUserChallenges(userId, new Date());
+    const today = new Date();
+    
+    // Get all data needed to calculate progress
+    const [challengesList, goal, meals, water, exercises] = await Promise.all([
+      storage.getChallenges(),
+      storage.getGoal(userId),
+      storage.getMeals(userId, today),
+      storage.getWaterIntake(userId, today),
+      storage.getExercises(userId, today),
+    ]);
+    
+    const calorieGoal = goal?.calories || 2000;
+    const proteinGoal = goal?.protein || 150;
+    const waterGoal = goal?.waterGlasses || 8;
+    
+    // Calculate actual values
+    const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
+    const totalProtein = meals.reduce((sum, m) => sum + m.protein, 0);
+    const mealsCount = meals.length;
+    const waterGlasses = water?.glasses || 0;
+    const totalExerciseMinutes = exercises.reduce((sum, e) => sum + (e.duration || 0), 0);
+    const totalCaloriesBurned = exercises.reduce((sum, e) => sum + (e.caloriesBurned || 0), 0);
+    
+    // Build progress for each challenge
+    const progress = challengesList.map(challenge => {
+      let currentValue = 0;
+      let completed = false;
+      
+      switch (challenge.type) {
+        case 'water':
+          // Water is now stored in 10ml units, target is 8 "glasses" (we need to convert)
+          // But target is 8 glasses which means 800ml = 80 units of 10ml
+          currentValue = Math.floor(waterGlasses / 10); // Convert to "glasses" (100ml each)
+          completed = currentValue >= challenge.targetValue;
+          break;
+        case 'calories':
+          // Stay under calorie goal - completed if consumed <= goal
+          currentValue = totalCalories <= calorieGoal ? 1 : 0;
+          completed = currentValue >= challenge.targetValue;
+          break;
+        case 'protein':
+          // Hit protein target - completed if consumed >= goal
+          currentValue = totalProtein >= proteinGoal ? 1 : 0;
+          completed = currentValue >= challenge.targetValue;
+          break;
+        case 'meals':
+          currentValue = mealsCount;
+          completed = currentValue >= challenge.targetValue;
+          break;
+        case 'exercise':
+          currentValue = totalExerciseMinutes;
+          completed = currentValue >= challenge.targetValue;
+          break;
+        case 'exercise_calories':
+          currentValue = totalCaloriesBurned;
+          completed = currentValue >= challenge.targetValue;
+          break;
+        case 'vegetables':
+        case 'no_sugar':
+          // These need manual tracking - keep at 0 unless manually set
+          currentValue = 0;
+          completed = false;
+          break;
+      }
+      
+      return {
+        id: 0, // Will be set by actual record if exists
+        challengeId: challenge.id,
+        currentValue,
+        completed,
+        challenge,
+      };
+    });
+    
     res.json(progress);
   });
 
