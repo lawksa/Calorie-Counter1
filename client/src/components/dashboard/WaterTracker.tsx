@@ -10,7 +10,7 @@ interface WaterTrackerProps {
 }
 
 export function WaterTracker({ glasses, target, onUpdate, isPending }: WaterTrackerProps) {
-  const mlConsumed = glasses * 100;
+  const mlConsumed = glasses * 10;
   const targetMl = 3000;
   const percentage = Math.min(100, Math.round((mlConsumed / targetMl) * 100));
   
@@ -88,7 +88,7 @@ export function WaterTracker({ glasses, target, onUpdate, isPending }: WaterTrac
             {percentage}%
           </motion.span>
           <span className="text-xs text-muted-foreground">
-            +100 مل لكل ضغطة
+            +10 مل لكل ضغطة
           </span>
         </div>
       </div>
@@ -99,31 +99,31 @@ export function WaterTracker({ glasses, target, onUpdate, isPending }: WaterTrac
           variant="outline"
           size="sm"
           className="flex-1 text-xs"
-          onClick={() => onUpdate(glasses + 2)}
+          onClick={() => onUpdate(glasses + 10)}
           disabled={isPending}
-          data-testid="button-water-add-200"
+          data-testid="button-water-add-100"
         >
-          +200 مل
+          +100 مل
         </Button>
         <Button
           variant="outline"
           size="sm"
           className="flex-1 text-xs"
-          onClick={() => onUpdate(glasses + 5)}
+          onClick={() => onUpdate(glasses + 25)}
+          disabled={isPending}
+          data-testid="button-water-add-250"
+        >
+          +250 مل
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 text-xs"
+          onClick={() => onUpdate(glasses + 50)}
           disabled={isPending}
           data-testid="button-water-add-500"
         >
           +500 مل
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 text-xs"
-          onClick={() => onUpdate(glasses + 10)}
-          disabled={isPending}
-          data-testid="button-water-add-1000"
-        >
-          +1 لتر
         </Button>
       </div>
     </div>
