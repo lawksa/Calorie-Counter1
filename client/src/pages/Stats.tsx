@@ -14,12 +14,15 @@ import {
   TrendingDown,
   Scale,
   Plus,
-  Activity
+  Activity,
+  Calendar
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   LineChart,
@@ -103,6 +106,127 @@ function calculateTotalPerfectDays(stats: any, goals: any): number {
   return total;
 }
 
+interface DaySummary {
+  calories: number;
+  calorieGoal: number;
+  water: number;
+  waterGoal: number;
+  mealsCount: number;
+  adherence: number;
+}
+
+function WeeklyAdherenceCard() {
+  const today = new Date();
+  const weekStart = startOfWeek(today, { weekStartsOn: 6 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 6 });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  const { data: weeklySummary } = useQuery<Record<string, DaySummary>>({
+    queryKey: ['/api/weekly-summary', format(weekStart, 'yyyy-MM-dd')],
+    staleTime: 30000,
+  });
+
+  const getAdherenceGradient = (adherence: number) => {
+    if (adherence >= 80) return "from-green-500 to-green-600";
+    if (adherence >= 50) return "from-yellow-500 to-yellow-600";
+    if (adherence > 0) return "from-orange-500 to-orange-600";
+    return "from-muted to-muted";
+  };
+
+  const avgAdherence = weeklySummary 
+    ? Math.round(Object.values(weeklySummary).reduce((sum, d) => sum + d.adherence, 0) / 7)
+    : 0;
+
+  return (
+    <Card className="p-4 border-0 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-primary" />
+          <h3 className="font-bold">الالتزام الأسبوعي</h3>
+        </div>
+        <div className="text-sm">
+          <span className="text-muted-foreground">المتوسط: </span>
+          <span className={cn(
+            "font-bold",
+            avgAdherence >= 80 ? "text-green-600" : avgAdherence >= 50 ? "text-yellow-600" : "text-orange-600"
+          )}>
+            {avgAdherence}%
+          </span>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        {weekDays.map((day, index) => {
+          const dateKey = format(day, 'yyyy-MM-dd');
+          const daySummary = weeklySummary?.[dateKey];
+          const adherence = daySummary?.adherence || 0;
+          const isDayToday = isSameDay(day, today);
+          const hasData = daySummary && daySummary.mealsCount > 0;
+
+          return (
+            <motion.div
+              key={dateKey}
+              className="flex-1 flex flex-col items-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <span className="text-xs text-muted-foreground mb-1">
+                {format(day, "EEE", { locale: ar })}
+              </span>
+              <div className={cn(
+                "w-full aspect-square rounded-xl relative overflow-hidden border",
+                isDayToday ? "border-primary border-2" : "border-border"
+              )}>
+                {hasData && (
+                  <motion.div 
+                    className={cn(
+                      "absolute bottom-0 left-0 right-0 bg-gradient-to-t",
+                      getAdherenceGradient(adherence)
+                    )}
+                    initial={{ height: 0 }}
+                    animate={{ height: `${adherence}%` }}
+                    transition={{ duration: 0.5, delay: index * 0.05 }}
+                  />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className={cn(
+                    "text-xs font-bold",
+                    hasData && adherence >= 50 ? "text-white" : "text-muted-foreground"
+                  )}>
+                    {hasData ? `${adherence}%` : "-"}
+                  </span>
+                </div>
+              </div>
+              <span className={cn(
+                "text-xs mt-1",
+                isDayToday ? "font-bold text-primary" : "text-muted-foreground"
+              )}>
+                {format(day, "d")}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-center gap-4 mt-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-green-500 to-green-600" />
+          <span className="text-muted-foreground">ممتاز (80%+)</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-yellow-500 to-yellow-600" />
+          <span className="text-muted-foreground">جيد (50%+)</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-orange-500 to-orange-600" />
+          <span className="text-muted-foreground">ضعيف</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function Stats() {
   const { data: stats, isLoading: statsLoading } = useWeeklyStats();
   const { data: weightLogs, isLoading: weightLoading } = useWeightLogs();
@@ -183,6 +307,11 @@ export default function Stats() {
         {/* Life Score */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <LifeScoreCard />
+        </motion.div>
+
+        {/* Weekly Adherence */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}>
+          <WeeklyAdherenceCard />
         </motion.div>
 
         {/* BMI & Profile */}

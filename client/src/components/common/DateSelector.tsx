@@ -34,12 +34,18 @@ export function DateSelector({ date, onDateChange }: DateSelectorProps) {
     staleTime: 30000,
   });
 
-  const getAdherenceColor = (adherence: number, isSelected: boolean) => {
-    if (isSelected) return "bg-white";
-    if (adherence >= 80) return "bg-green-500";
-    if (adherence >= 50) return "bg-yellow-500";
-    if (adherence > 0) return "bg-orange-500";
-    return "bg-muted-foreground/30";
+  const getAdherenceGradient = (adherence: number) => {
+    if (adherence >= 80) return "from-green-500/40 to-green-600/40";
+    if (adherence >= 50) return "from-yellow-500/40 to-yellow-600/40";
+    if (adherence > 0) return "from-orange-500/40 to-orange-600/40";
+    return "";
+  };
+
+  const getAdherenceBorder = (adherence: number) => {
+    if (adherence >= 80) return "border-green-500";
+    if (adherence >= 50) return "border-yellow-500";
+    if (adherence > 0) return "border-orange-500";
+    return "border-border";
   };
 
   return (
@@ -89,57 +95,55 @@ export function DateSelector({ date, onDateChange }: DateSelectorProps) {
               key={day.toISOString()}
               onClick={() => onDateChange(day)}
               className={cn(
-                "flex-1 flex flex-col items-center py-3 rounded-2xl transition-all duration-300 relative",
+                "flex-1 flex flex-col items-center py-3 rounded-2xl transition-all duration-300 relative overflow-hidden border",
                 isSelected 
-                  ? "bg-gradient-to-br from-primary to-emerald-500 text-white shadow-lg shadow-primary/25" 
-                  : "bg-card border hover:bg-muted/50"
+                  ? "bg-gradient-to-br from-primary to-emerald-500 text-white shadow-lg shadow-primary/25 border-transparent" 
+                  : hasData 
+                    ? cn("bg-card hover:bg-muted/50", getAdherenceBorder(adherence))
+                    : "bg-card border-border hover:bg-muted/50"
               )}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
               data-testid={`date-${dateKey}`}
             >
+              {/* Adherence fill background */}
+              {hasData && !isSelected && (
+                <motion.div 
+                  className={cn(
+                    "absolute bottom-0 left-0 right-0 bg-gradient-to-t",
+                    getAdherenceGradient(adherence)
+                  )}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${adherence}%` }}
+                  transition={{ duration: 0.5, delay: index * 0.05 }}
+                />
+              )}
+              
               <span className={cn(
-                "text-xs font-medium mb-1",
+                "text-xs font-medium mb-1 relative z-10",
                 isSelected ? "text-white/80" : "text-muted-foreground"
               )}>
                 {format(day, "EEE", { locale: ar })}
               </span>
               <span className={cn(
-                "text-lg font-bold",
+                "text-lg font-bold relative z-10",
                 isDayToday && !isSelected && "text-primary"
               )}>
                 {format(day, "d")}
               </span>
               
-              {/* Adherence indicator */}
-              <div className="flex gap-0.5 mt-1.5">
-                {hasData ? (
-                  <>
-                    <div className={cn(
-                      "w-1.5 h-1.5 rounded-full",
-                      getAdherenceColor(adherence, isSelected)
-                    )} />
-                    {adherence >= 50 && (
-                      <div className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        getAdherenceColor(adherence, isSelected)
-                      )} />
-                    )}
-                    {adherence >= 80 && (
-                      <div className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        getAdherenceColor(adherence, isSelected)
-                      )} />
-                    )}
-                  </>
-                ) : isDayToday ? (
-                  <div className={cn(
-                    "w-1.5 h-1.5 rounded-full",
-                    isSelected ? "bg-white" : "bg-primary"
-                  )} />
-                ) : null}
-              </div>
+              {/* Adherence percentage */}
+              {hasData && !isSelected && (
+                <span className="text-[10px] font-medium text-muted-foreground relative z-10 mt-0.5">
+                  {adherence}%
+                </span>
+              )}
+              
+              {/* Today indicator */}
+              {isDayToday && !hasData && !isSelected && (
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 relative z-10" />
+              )}
             </motion.button>
           );
         })}
