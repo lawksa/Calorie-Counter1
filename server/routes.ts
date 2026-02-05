@@ -83,20 +83,8 @@ export async function registerRoutes(
       console.log("Analyzing meal image, size:", Math.round(image.length / 1024), "KB");
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
-          {
-            role: "system",
-            content: `أنت خبير تغذية. قم بتحليل صورة الطعام وقدم تقديراً للسعرات الحرارية والقيم الغذائية.
-أجب بتنسيق JSON فقط بدون أي نص إضافي:
-{
-  "name": "اسم الوجبة بالعربية",
-  "calories": رقم السعرات الحرارية,
-  "protein": رقم البروتين بالجرام,
-  "carbs": رقم الكربوهيدرات بالجرام,
-  "fats": رقم الدهون بالجرام
-}`
-          },
           {
             role: "user",
             content: [
@@ -109,12 +97,20 @@ export async function registerRoutes(
               },
               {
                 type: "text",
-                text: "حلل هذه الوجبة وأعطني القيم الغذائية التقريبية"
+                text: `أنت خبير تغذية. قم بتحليل صورة الطعام وقدم تقديراً للسعرات الحرارية والقيم الغذائية.
+أجب بتنسيق JSON فقط بدون أي نص إضافي:
+{
+  "name": "اسم الوجبة بالعربية",
+  "calories": رقم السعرات الحرارية,
+  "protein": رقم البروتين بالجرام,
+  "carbs": رقم الكربوهيدرات بالجرام,
+  "fats": رقم الدهون بالجرام
+}`
               }
             ]
           }
         ],
-        max_completion_tokens: 500
+        max_tokens: 500
       });
 
       const content = response.choices[0]?.message?.content || "";
