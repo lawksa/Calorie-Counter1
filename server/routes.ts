@@ -8,6 +8,7 @@ import OpenAI from "openai";
 import { seedRestaurants } from "./seed-restaurants";
 import { seedRecipes } from "./seed-recipes";
 import { seedChallenges } from "./seed-challenges";
+import { registerOrganizerRoutes } from "./organizer";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -29,6 +30,9 @@ export async function registerRoutes(
   await seedChallenges();
 
   const requireAuth = isAuthenticated;
+
+  // --- Smart Organizer (AI assistant) ---
+  registerOrganizerRoutes(app, requireAuth, openai);
 
   // --- Meals ---
   app.get(api.meals.list.path, requireAuth, async (req, res) => {

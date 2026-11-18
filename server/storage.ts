@@ -2,6 +2,7 @@ import {
   users, goals, meals, waterIntake, restaurants, menuItems, 
   weightLogs, recipes, exercises, challenges, userChallenges,
   bodyMeasurements, dailyHabits, savedFoods, friendships, friendChallenges, friendChallengeParticipants,
+  organizerItems, organizerMessages, type OrganizerItem, type InsertOrganizerItem, type OrganizerMessage,
   type User, type UpsertUser, type Goal, type InsertGoal, 
   type Meal, type InsertMeal, type WaterIntake, type Restaurant, type MenuItem,
   type WeightLog, type InsertWeightLog, type Recipe, type Exercise, type InsertExercise,
@@ -91,6 +92,15 @@ export interface IStorage {
   getFriendChallenges(userId: string): Promise<(FriendChallenge & { participants: (FriendChallengeParticipant & { user: User })[], creator: User })[]>;
   updateChallengeProgress(userId: string, challengeId: number, value: number): Promise<FriendChallengeParticipant>;
   getChallengeLeaderboard(challengeId: number): Promise<(FriendChallengeParticipant & { user: User })[]>;
+
+  // Smart Organizer
+  getOrganizerItems(userId: string): Promise<OrganizerItem[]>;
+  createOrganizerItem(userId: string, item: InsertOrganizerItem): Promise<OrganizerItem>;
+  updateOrganizerItem(id: number, userId: string, updates: Partial<InsertOrganizerItem> & { notified?: boolean }): Promise<OrganizerItem | undefined>;
+  deleteOrganizerItem(id: number, userId: string): Promise<void>;
+  getOrganizerMessages(userId: string, limit?: number): Promise<OrganizerMessage[]>;
+  createOrganizerMessage(userId: string, role: string, content: string): Promise<OrganizerMessage>;
+  clearOrganizerMessages(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -743,6 +753,47 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return result;
+  }
+
+  // Smart Organizer
+  async getOrganizerItems(userId: string): Promise<OrganizerItem[]> {
+    return db.select().from(organizerItems)
+      .where(eq(organizerItems.userId, userId))
+      .orderBy(organizerItems.completed, organizerItems.dueAt, desc(organizerItems.createdAt));
+  }
+
+  async createOrganizerItem(userId: string, item: InsertOrganizerItem): Promise<OrganizerItem> {
+    const [created] = await db.insert(organizerItems).values({ ...item, userId }).returning();
+    return created;
+  }
+
+  async updateOrganizerItem(id: number, userId: string, updates: Partial<InsertOrganizerItem> & { notified?: boolean }): Promise<OrganizerItem | undefined> {
+    const [updated] = await db.update(organizerItems)
+      .set(updates)
+      .where(and(eq(organizerItems.id, id), eq(organizerItems.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteOrganizerItem(id: number, userId: string): Promise<void> {
+    await db.delete(organizerItems).where(and(eq(organizerItems.id, id), eq(organizerItems.userId, userId)));
+  }
+
+  async getOrganizerMessages(userId: string, limit = 50): Promise<OrganizerMessage[]> {
+    const rows = await db.select().from(organizerMessages)
+      .where(eq(organizerMessages.userId, userId))
+      .orderBy(desc(organizerMessages.createdAt), desc(organizerMessages.id))
+      .limit(limit);
+    return rows.reverse();
+  }
+
+  async createOrganizerMessage(userId: string, role: string, content: string): Promise<OrganizerMessage> {
+    const [created] = await db.insert(organizerMessages).values({ userId, role, content }).returning();
+    return created;
+  }
+
+  async clearOrganizerMessages(userId: string): Promise<void> {
+    await db.delete(organizerMessages).where(eq(organizerMessages.userId, userId));
   }
 }
 

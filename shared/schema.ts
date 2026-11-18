@@ -203,6 +203,30 @@ export const friendChallengeParticipants = pgTable("friend_challenge_participant
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 
+// Smart Organizer (AI assistant) items: tasks, reminders, notes, events
+export const organizerItems = pgTable("organizer_items", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  type: text("type").notNull().default("task"), // task, reminder, note, event
+  title: text("title").notNull(),
+  notes: text("notes"),
+  category: text("category").notNull().default("general"), // general, work, personal, health, shopping, study
+  priority: text("priority").notNull().default("medium"), // low, medium, high
+  dueAt: timestamp("due_at"),
+  completed: boolean("completed").notNull().default(false),
+  notified: boolean("notified").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Smart Organizer chat history
+export const organizerMessages = pgTable("organizer_messages", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  role: text("role").notNull(), // user, assistant
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertGoalSchema = createInsertSchema(goals).omit({ id: true, userId: true, updatedAt: true });
@@ -221,6 +245,7 @@ export const insertSavedFoodSchema = createInsertSchema(savedFoods).omit({ id: t
 export const insertFriendshipSchema = createInsertSchema(friendships).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFriendChallengeSchema = createInsertSchema(friendChallenges).omit({ id: true, createdAt: true });
 export const insertFriendChallengeParticipantSchema = createInsertSchema(friendChallengeParticipants).omit({ id: true, joinedAt: true });
+export const insertOrganizerItemSchema = createInsertSchema(organizerItems).omit({ id: true, userId: true, createdAt: true, notified: true });
 
 // === TYPES ===
 
@@ -271,6 +296,11 @@ export type InsertFriendChallenge = z.infer<typeof insertFriendChallengeSchema>;
 
 export type FriendChallengeParticipant = typeof friendChallengeParticipants.$inferSelect;
 export type InsertFriendChallengeParticipant = z.infer<typeof insertFriendChallengeParticipantSchema>;
+
+export type OrganizerItem = typeof organizerItems.$inferSelect;
+export type InsertOrganizerItem = z.infer<typeof insertOrganizerItemSchema>;
+
+export type OrganizerMessage = typeof organizerMessages.$inferSelect;
 
 // Request Types
 export type CreateMealRequest = InsertMeal & { date?: string };

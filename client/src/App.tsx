@@ -15,6 +15,8 @@ import Exercises from "@/pages/Exercises";
 import Restaurants from "@/pages/Restaurants";
 import HealthConnect from "@/pages/HealthConnect";
 import Friends from "@/pages/Friends";
+import Organizer from "@/pages/Organizer";
+import { ReminderWatcher } from "@/components/organizer/ReminderWatcher";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -39,6 +41,8 @@ function Router() {
   }
 
   return (
+    <>
+    <ReminderWatcher />
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/meals" component={Meals} />
@@ -48,8 +52,10 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/health-connect" component={HealthConnect} />
       <Route path="/friends" component={Friends} />
+      <Route path="/organizer" component={Organizer} />
       <Route component={NotFound} />
     </Switch>
+    </>
   );
 }
 

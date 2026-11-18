@@ -13,7 +13,8 @@ import {
   Camera,
   ScanBarcode,
   PenLine,
-  Users
+  Users,
+  Bot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,6 +55,18 @@ export function AppLayout({ children, onManualAdd, onCameraAdd, onBarcodeAdd }: 
           </div>
           
           <div className="flex items-center gap-2">
+            <Link href="/organizer">
+              <div
+                className={cn(
+                  "w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center",
+                  location === "/organizer" && "ring-2 ring-offset-2 ring-violet-500 ring-offset-background"
+                )}
+                data-testid="button-organizer"
+                aria-label="المنظّم الذكي"
+              >
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+            </Link>
             <Link href="/friends">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center" data-testid="button-friends">
                 <Users className="w-5 h-5 text-white" />
