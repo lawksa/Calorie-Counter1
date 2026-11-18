@@ -4,9 +4,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2 } from "lucide-react";
+import { Loader2, WifiOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import Meals from "@/pages/Meals";
@@ -32,11 +32,11 @@ function Router() {
 
   if (!user) {
     return (
-      <Switch>
-        <Route path="/" component={Landing} />
-        {/* Redirect any other route to landing for unauthenticated users */}
-        <Route component={Landing} />
-      </Switch>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background p-6 text-center" dir="rtl">
+        <WifiOff className="w-10 h-10 text-muted-foreground" />
+        <p className="font-medium">تعذّر الاتصال بالخادم</p>
+        <Button onClick={() => window.location.reload()}>إعادة المحاولة</Button>
+      </div>
     );
   }
 
