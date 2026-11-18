@@ -45,7 +45,7 @@ The application is designed for Arabic (RTL) layout with `dir="rtl"` on root ele
 
 ### Database
 - **PostgreSQL**: Primary data store accessed via `DATABASE_URL` environment variable
-- Tables: users, sessions, goals, meals, water_intake, restaurants, menu_items, conversations, messages, weight_logs, recipes, exercises, challenges, user_challenges, friendships, friend_challenges, friend_challenge_participants
+- Tables: users, sessions, goals, meals, water_intake, restaurants, menu_items, conversations, messages, weight_logs, recipes, exercises, challenges, user_challenges, friendships, friend_challenges, friend_challenge_participants, organizer_items, organizer_messages
 
 ## Recent Changes (February 2026)
 
@@ -58,6 +58,8 @@ The application is designed for Arabic (RTL) layout with `dir="rtl"` on root ele
 6. **Exercise Timer** - Real-time timer that counts exercise duration and calculates calories burned live; user can start/stop timer and exercise is automatically saved with calculated values
 7. **Friends System** - User profile with username, friend search/add by username, friend requests (send/accept/reject), friends list management
 8. **Friend Challenges** - Create challenges between friends (calories burned, steps, water, meals logged), track progress, leaderboard with rankings
+
+9. **Smart Organizer (المنظّم الذكي)** - AI assistant bot at `/organizer` (Bot button in the header). Users chat in Arabic (text or voice) and the assistant creates/updates/completes/deletes tasks, reminders, events and notes. Includes task lists (today/upcoming/all/done), notes, manual add/edit, and in-app + browser notifications when reminders are due (`ReminderWatcher`). Server code in `server/organizer.ts`; tables `organizer_items` and `organizer_messages` (run `npm run db:push`).
 
 ### Navigation
 Bottom navigation with 5 tabs: Home, Restaurants, Recipes, Exercises, Stats
