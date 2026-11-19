@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Loader2, Save, Target, LogOut, User, Flame, Beef, Wheat, Droplets, GlassWater, Calculator, ChevronDown, ChevronUp, Sparkles, Check, Watch, ChevronLeft } from "lucide-react";
+import { Loader2, Save, Target, User, Flame, Beef, Wheat, Droplets, GlassWater, Calculator, ChevronDown, ChevronUp, Sparkles, Check, Watch, ChevronLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -131,7 +131,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function Settings() {
   const { data: goals, isLoading } = useGoals();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const updateGoals = useUpdateGoals();
   const { toast } = useToast();
 
@@ -282,15 +282,6 @@ export default function Settings() {
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
               </div>
             </div>
-            
-            <Button 
-              variant="outline"
-              className="w-full mt-4 h-12 rounded-xl text-destructive border-destructive/30 hover:bg-destructive/10"
-              onClick={() => logout()}
-            >
-              <LogOut className="w-5 h-5 ml-2" />
-              تسجيل الخروج
-            </Button>
           </Card>
         </motion.div>
 
