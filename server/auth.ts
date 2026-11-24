@@ -30,9 +30,14 @@ function safeEqual(a: string, b: string) {
 
 /** Optional site-wide password. Must be registered before any other route. */
 export function passwordGate(app: Express) {
+  app.get("/healthz", (_req, res) => res.send("ok"));
+
   const password = process.env.APP_PASSWORD;
   if (!password) return;
+  // Files browsers fetch without the password (install-to-home-screen, icons, health check)
+  const PUBLIC = new Set(["/healthz", "/manifest.webmanifest", "/sw.js", "/favicon.png", "/apple-touch-icon.png", "/icon-192.png", "/icon-512.png"]);
   app.use((req, res, next) => {
+    if (PUBLIC.has(req.path)) return next();
     const header = req.headers.authorization ?? "";
     if (header.startsWith("Basic ")) {
       const decoded = Buffer.from(header.slice(6), "base64").toString();

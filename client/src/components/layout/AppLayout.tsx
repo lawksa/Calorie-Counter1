@@ -13,7 +13,6 @@ import {
   Camera,
   ScanBarcode,
   PenLine,
-  Users,
   Bot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -65,11 +64,6 @@ export function AppLayout({ children, onManualAdd, onCameraAdd, onBarcodeAdd }: 
                 aria-label="المنظّم الذكي"
               >
                 <Bot className="w-5 h-5 text-white" />
-              </div>
-            </Link>
-            <Link href="/friends">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center" data-testid="button-friends">
-                <Users className="w-5 h-5 text-white" />
               </div>
             </Link>
             <Link href="/settings">

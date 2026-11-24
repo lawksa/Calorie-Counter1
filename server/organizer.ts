@@ -3,6 +3,7 @@ import type OpenAI from "openai";
 import { z } from "zod";
 import { storage } from "./storage";
 import type { OrganizerItem } from "@shared/schema";
+import { recurrences, completeItem, markNotified } from "./recurrence";
 
 const itemTypes = ["task", "reminder", "note", "event"] as const;
 const categories = ["general", "work", "personal", "health", "shopping", "study"] as const;
@@ -19,6 +20,7 @@ const itemInput = z.object({
     .transform((s) => (/[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : `${s}+03:00`)) // no offset → Riyadh time
     .refine((s) => !isNaN(Date.parse(s)), "تاريخ غير صالح")
     .nullish(),
+  recurrence: z.enum(recurrences).nullish(),
   completed: z.boolean().optional(),
 });
 
@@ -46,7 +48,8 @@ function describeItem(item: OrganizerItem) {
   const due = item.dueAt
     ? new Date(item.dueAt).toLocaleString("en-GB", { timeZone: TIMEZONE, hour12: false })
     : "بدون موعد";
-  return `#${item.id} [${item.type}/${item.category}/${item.priority}] ${item.title} — ${due}${item.completed ? " (منجزة)" : ""}`;
+  const repeat = item.recurrence ? ` (يتكرر: ${item.recurrence})` : "";
+  return `#${item.id} [${item.type}/${item.category}/${item.priority}] ${item.title} — ${due}${repeat}${item.completed ? " (منجزة)" : ""}`;
 }
 
 function nowInRiyadh() {
@@ -77,6 +80,7 @@ ${done.length ? done.map(describeItem).join("\n") : "لا يوجد"}
 - category: general | work | personal | health | shopping | study
 - priority: low | medium | high
 - dueAt: تاريخ ووقت بصيغة ISO 8601 مع المنطقة الزمنية +03:00 (مثال: 2026-01-15T09:00:00+03:00). احسب التواريخ النسبية ("بكرة"، "بعد ساعتين"، "الخميس الجاي") من الوقت الحالي. إذا ذُكر يوم بدون وقت للتذكير استخدم 09:00. اترك dueAt = null للملاحظات أو إذا لم يُذكر وقت.
+- recurrence: "daily" | "weekly" | "monthly" أو null. استخدمه عندما يقول المستخدم "كل يوم"، "يومياً"، "كل أسبوع"، "كل خميس"، "كل شهر"... ويجب أن يكون معه dueAt لأول مرة (مثال: "كل خميس 8 الصبح" ← dueAt أقرب خميس 08:00 و recurrence "weekly"). التذكير المتكرر يتجدد تلقائياً بعد تنبيهه، والمهمة المتكررة تتجدد عند إنجازها.
 - لتعديل أو إنهاء أو حذف عنصر استخدم رقمه (#id) من القائمة أعلاه فقط.
 - إذا سأل المستخدم "وش عندي اليوم" أو طلب ملخصاً أو خطة، رتّب الإجابة من القائمة أعلاه حسب الوقت والأولوية دون إنشاء عناصر.
 - لا تخترع أرقام عناصر غير موجودة. إذا كان الطلب غامضاً اسأل سؤالاً قصيراً.
@@ -86,7 +90,7 @@ ${done.length ? done.map(describeItem).join("\n") : "لا يوجد"}
 {
   "reply": "نص الرد للمستخدم",
   "actions": [
-    {"action": "create", "item": {"type": "task", "title": "...", "notes": null, "category": "general", "priority": "medium", "dueAt": null}},
+    {"action": "create", "item": {"type": "task", "title": "...", "notes": null, "category": "general", "priority": "medium", "dueAt": null, "recurrence": null}},
     {"action": "update", "id": 12, "changes": {"dueAt": "..."}},
     {"action": "complete", "id": 12},
     {"action": "delete", "id": 12}
@@ -116,18 +120,26 @@ export function registerOrganizerRoutes(app: Express, requireAuth: RequestHandle
     if (!parsed.success) {
       return res.status(400).json({ message: parsed.error.errors[0].message });
     }
-    const updates: any = toDbFields(parsed.data);
+    const existing = await storage.getOrganizerItem(parseInt(String(req.params.id)), userIdOf(req));
+    if (!existing) return res.status(404).json({ message: "العنصر غير موجود" });
+
+    const { completed, ...rest } = parsed.data;
+    const updates: any = toDbFields(rest);
     // Re-arm the reminder when its time changes or it is reopened
-    if (parsed.data.dueAt !== undefined || parsed.data.completed === false) updates.notified = false;
-    const item = await storage.updateOrganizerItem(parseInt(String(req.params.id)), userIdOf(req), updates);
-    if (!item) return res.status(404).json({ message: "العنصر غير موجود" });
+    if (rest.dueAt !== undefined || completed === false) updates.notified = false;
+    if (completed === false) updates.completed = false;
+
+    let item = Object.keys(updates).length
+      ? await storage.updateOrganizerItem(existing.id, existing.userId, updates)
+      : existing;
+    if (completed === true && !existing.completed && item) item = await completeItem(item);
     res.json(item);
   });
 
   app.post("/api/organizer/items/:id/notified", requireAuth, async (req, res) => {
-    const item = await storage.updateOrganizerItem(parseInt(String(req.params.id)), userIdOf(req), { notified: true });
-    if (!item) return res.status(404).json({ message: "العنصر غير موجود" });
-    res.json(item);
+    const existing = await storage.getOrganizerItem(parseInt(String(req.params.id)), userIdOf(req));
+    if (!existing) return res.status(404).json({ message: "العنصر غير موجود" });
+    res.json(await markNotified(existing));
   });
 
   app.delete("/api/organizer/items/:id", requireAuth, async (req, res) => {
@@ -182,7 +194,7 @@ export function registerOrganizerRoutes(app: Express, requireAuth: RequestHandle
         reply = "عذراً، لم أفهم ذلك جيداً. حاول صياغة طلبك بشكل آخر.";
       }
 
-      const ownedIds = new Set(items.map((i) => i.id));
+      const owned = new Map(items.map((i) => [i.id, i]));
       const applied = { created: 0, updated: 0, completed: 0, deleted: 0 };
 
       for (const raw of rawActions.slice(0, 20)) {
@@ -197,15 +209,18 @@ export function registerOrganizerRoutes(app: Express, requireAuth: RequestHandle
           continue;
         }
 
-        if (!ownedIds.has(action.id)) continue;
+        const target = owned.get(action.id);
+        if (!target) continue;
 
         if (action.action === "update") {
-          const updates: any = toDbFields(action.changes);
-          if (action.changes.dueAt !== undefined) updates.notified = false;
-          await storage.updateOrganizerItem(action.id, userId, updates);
+          const { completed, ...changes } = action.changes;
+          const updates: any = toDbFields(changes);
+          if (changes.dueAt !== undefined) updates.notified = false;
+          if (Object.keys(updates).length) await storage.updateOrganizerItem(action.id, userId, updates);
+          if (completed === true && !target.completed) await completeItem({ ...target, ...updates });
           applied.updated++;
         } else if (action.action === "complete") {
-          await storage.updateOrganizerItem(action.id, userId, { completed: true });
+          if (!target.completed) await completeItem(target);
           applied.completed++;
         } else if (action.action === "delete") {
           await storage.deleteOrganizerItem(action.id, userId);

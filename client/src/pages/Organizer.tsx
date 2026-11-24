@@ -23,8 +23,9 @@ import {
 import type { OrganizerItem } from "@shared/schema";
 import {
   Bot, Send, Mic, MicOff, Trash2, Plus, Bell, CheckSquare, StickyNote, CalendarDays,
-  Loader2, Sparkles, AlertCircle, Clock, Eraser, Pencil,
+  Loader2, Sparkles, AlertCircle, Clock, Eraser, Pencil, Repeat, BellRing, BellOff,
 } from "lucide-react";
+import { usePushNotifications } from "@/hooks/use-push";
 import { format, formatDistanceToNow, isToday, isTomorrow, isPast, startOfDay, endOfDay } from "date-fns";
 import { ar } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +48,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   study: "دراسة",
 };
 
+const REPEAT_LABELS: Record<string, string> = {
+  none: "بدون تكرار",
+  daily: "يومياً",
+  weekly: "أسبوعياً",
+  monthly: "شهرياً",
+};
+
 const PRIORITY_META: Record<string, { label: string; className: string }> = {
   high: { label: "عالية", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   medium: { label: "متوسطة", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
@@ -56,6 +64,7 @@ const PRIORITY_META: Record<string, { label: string; className: string }> = {
 const SUGGESTIONS = [
   "وش عندي اليوم؟",
   "ذكّرني أشرب ماء بعد ساعة",
+  "ذكّرني كل يوم الساعة 8 الصبح أشرب ماء",
   "أضف قائمة مشتريات: حليب، خبز، بيض",
   "رتّب لي يومي حسب الأولوية",
   "عندي اجتماع بكرة الساعة 10 الصبح",
@@ -121,6 +130,12 @@ function ItemCard({ item, onEdit }: { item: OrganizerItem; onEdit: (item: Organi
               {PRIORITY_META[item.priority]?.label}
             </span>
           )}
+          {item.recurrence && (
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              <Repeat className="w-3 h-3" />
+              {REPEAT_LABELS[item.recurrence] ?? item.recurrence}
+            </span>
+          )}
           {due && (
             <span className={cn("inline-flex items-center gap-1 text-[10px]", overdue ? "text-red-600 font-semibold" : "text-muted-foreground")}>
               <Clock className="w-3 h-3" />
@@ -151,7 +166,12 @@ function ItemCard({ item, onEdit }: { item: OrganizerItem; onEdit: (item: Organi
 }
 
 // ---------- Add / edit dialog ----------
-type FormState = Required<Omit<OrganizerItemInput, "completed" | "dueAt" | "notes">> & { notes: string; dueLocal: string };
+type Repeat = "none" | "daily" | "weekly" | "monthly";
+type FormState = Required<Omit<OrganizerItemInput, "completed" | "dueAt" | "notes" | "recurrence">> & {
+  notes: string;
+  dueLocal: string;
+  repeat: Repeat;
+};
 
 const emptyForm = (type: FormState["type"] = "task"): FormState => ({
   type,
@@ -160,6 +180,7 @@ const emptyForm = (type: FormState["type"] = "task"): FormState => ({
   category: "general",
   priority: "medium",
   dueLocal: "",
+  repeat: "none",
 });
 
 function ItemDialog({
@@ -189,6 +210,7 @@ function ItemDialog({
             category: editing.category as FormState["category"],
             priority: editing.priority as FormState["priority"],
             dueLocal: editing.dueAt ? format(new Date(editing.dueAt), "yyyy-MM-dd'T'HH:mm") : "",
+            repeat: (editing.recurrence as Repeat) ?? "none",
           }
         : emptyForm(defaultType),
     );
@@ -206,6 +228,8 @@ function ItemDialog({
       category: form.category,
       priority: form.priority,
       dueAt: form.dueLocal ? new Date(form.dueLocal).toISOString() : null,
+      // Repeating needs a first date/time to count from
+      recurrence: form.dueLocal && form.type !== "note" && form.repeat !== "none" ? form.repeat : null,
     };
     try {
       if (editing) await update.mutateAsync({ id: editing.id, ...payload });
@@ -289,6 +313,28 @@ function ItemDialog({
                 onChange={(e) => setForm((f) => ({ ...f, dueLocal: e.target.value }))}
                 dir="ltr"
               />
+            </div>
+          )}
+
+          {form.type !== "note" && form.dueLocal && (
+            <div className="space-y-1.5">
+              <Label>التكرار</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {(Object.keys(REPEAT_LABELS) as Repeat[]).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, repeat: k }))}
+                    className={cn(
+                      "rounded-xl border py-2 text-xs transition",
+                      form.repeat === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground",
+                    )}
+                    data-testid={`repeat-${k}`}
+                  >
+                    {REPEAT_LABELS[k]}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -540,6 +586,81 @@ function TaskList({ items, onEdit }: { items: OrganizerItem[]; onEdit: (i: Organ
   );
 }
 
+// ---------- Push notifications card ----------
+function PushCard() {
+  const { toast } = useToast();
+  const push = usePushNotifications();
+  const isIOS = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone = typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches;
+
+  if (push.state === "loading" || push.state === "server-off") return null;
+
+  if (push.state === "unsupported") {
+    if (!isIOS || standalone) return null;
+    return (
+      <div className="rounded-2xl border bg-card p-3 text-xs text-muted-foreground flex items-start gap-2">
+        <BellRing className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
+        <p>لتصلك التذكيرات على الآيفون والتطبيق مغلق: اضغط زر المشاركة ثم "إضافة إلى الشاشة الرئيسية"، وافتح التطبيق من هناك.</p>
+      </div>
+    );
+  }
+
+  if (push.state === "denied") {
+    return (
+      <div className="rounded-2xl border bg-card p-3 text-xs text-muted-foreground flex items-start gap-2">
+        <BellOff className="w-4 h-4 mt-0.5 shrink-0" />
+        <p>التنبيهات محظورة لهذا الموقع. فعّلها من إعدادات المتصفح ثم أعد فتح الصفحة.</p>
+      </div>
+    );
+  }
+
+  const on = push.state === "on";
+  return (
+    <div className="rounded-2xl border bg-card p-3 flex items-center gap-3">
+      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", on ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
+        {on ? <BellRing className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">{on ? "التنبيهات مفعّلة على هذا الجهاز" : "تنبيهات والتطبيق مغلق"}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {on ? "ستصلك التذكيرات حتى لو أغلقت التطبيق" : "فعّلها لتصلك التذكيرات على جوالك أو جهازك"}
+        </p>
+      </div>
+      {on ? (
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs"
+            onClick={async () => {
+              try {
+                const r = await push.test();
+                toast({ title: r.sent ? "أُرسل تنبيه تجريبي" : "لم يصل التنبيه", description: r.sent ? undefined : "جرّب إيقاف التنبيهات وتفعيلها من جديد" });
+              } catch {
+                toast({ title: "تعذّر الإرسال", variant: "destructive" });
+              }
+            }}
+          >
+            تجربة
+          </Button>
+          <Button size="sm" variant="outline" className="text-xs" onClick={() => push.disable()}>
+            إيقاف
+          </Button>
+        </div>
+      ) : (
+        <Button
+          size="sm"
+          className="text-xs"
+          onClick={() => push.enable().catch(() => toast({ title: "تعذّر تفعيل التنبيهات", variant: "destructive" }))}
+          data-testid="button-enable-push"
+        >
+          تفعيل
+        </Button>
+      )}
+    </div>
+  );
+}
+
 // ---------- Page ----------
 export default function Organizer() {
   const { data: items = [], isLoading } = useOrganizerItems();
@@ -608,6 +729,8 @@ export default function Organizer() {
             ))}
           </div>
         </div>
+
+        <PushCard />
 
         <Tabs value={tab} onValueChange={setTab} dir="rtl">
           <TabsList className="grid grid-cols-3 w-full">

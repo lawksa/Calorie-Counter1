@@ -213,6 +213,7 @@ export const organizerItems = pgTable("organizer_items", {
   category: text("category").notNull().default("general"), // general, work, personal, health, shopping, study
   priority: text("priority").notNull().default("medium"), // low, medium, high
   dueAt: timestamp("due_at"),
+  recurrence: text("recurrence"), // null (once), daily, weekly, monthly
   completed: boolean("completed").notNull().default(false),
   notified: boolean("notified").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -225,6 +226,22 @@ export const organizerMessages = pgTable("organizer_messages", {
   role: text("role").notNull(), // user, assistant
   content: text("content").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Web Push subscriptions (one per browser/device) for reminders while the app is closed
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Small key/value store for server settings (e.g. auto-generated push keys)
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
 });
 
 // === SCHEMAS ===
@@ -301,6 +318,7 @@ export type OrganizerItem = typeof organizerItems.$inferSelect;
 export type InsertOrganizerItem = z.infer<typeof insertOrganizerItemSchema>;
 
 export type OrganizerMessage = typeof organizerMessages.$inferSelect;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
 // Request Types
 export type CreateMealRequest = InsertMeal & { date?: string };

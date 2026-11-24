@@ -9,6 +9,7 @@ export type OrganizerItemInput = {
   category?: "general" | "work" | "personal" | "health" | "shopping" | "study";
   priority?: "low" | "medium" | "high";
   dueAt?: string | null;
+  recurrence?: "daily" | "weekly" | "monthly" | null;
   completed?: boolean;
 };
 
