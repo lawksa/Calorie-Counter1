@@ -1,14 +1,10 @@
-import "./env";
 import express, { type Request, Response, NextFunction } from "express";
-import { passwordGate } from "./auth";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
 const httpServer = createServer(app);
-
-passwordGate(app);
 
 declare module "http" {
   interface IncomingMessage {

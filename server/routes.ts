@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, isAuthenticated } from "./auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import OpenAI from "openai";
 import { seedRestaurants } from "./seed-restaurants";
 import { seedRecipes } from "./seed-recipes";
@@ -11,8 +11,8 @@ import { seedChallenges } from "./seed-challenges";
 import { registerOrganizerRoutes } from "./organizer";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "missing-openai-key",
-  baseURL: process.env.OPENAI_BASE_URL || undefined,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
 export async function registerRoutes(
@@ -20,8 +20,9 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  // Single-user mode (no sign-in)
+  // Setup Replit Auth
   await setupAuth(app);
+  registerAuthRoutes(app);
 
   // Seed data on startup
   await seedRestaurants();
